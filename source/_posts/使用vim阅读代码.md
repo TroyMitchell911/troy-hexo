@@ -5,7 +5,6 @@ tags:
   - ubuntu
 categories:
   - ide
-  - ubuntu
 ---
 ## 环境
 - Ubuntu22.04
