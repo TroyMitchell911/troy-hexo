@@ -96,7 +96,19 @@ wget -O ~/.cscope_maps.vim https://cscope.sourceforge.net/cscope_maps.vim
 source ~/.cscope_maps.vim
 ```
 
-使用方法：在`vim`中光标放到一个`symbol`上，随后使用`vim`中配置的快捷键（details: ~/.cscope_maps.vim）。
+### 使用Cscope
+
+在`vim`中光标放到一个`symbol`上，随后使用`vim`中配置的快捷键（details: ~/.cscope_maps.vim）。
+- a: 查找一个符合被赋值(assigned)的地方
+- c: 查找调用(call)这个函数的函数
+- d: 查找被这个函数调用(called)的函数
+- e: 使用(egrep)搜索进行查找
+- f: 按照文件(file)名查找
+- g: 查找一个符合的全局(global)定义
+- i: 查找包含(include)这个文件的文件
+- s: 查找一个符合(symbol)的引用
+- t: 查找这个文本(text)字符串的所有出现位置
+
 e.g.: `ctrl + \ + c`: 搜索光标处的`symbol`在工程中被谁调用了。
 
 ## 创建脚本
