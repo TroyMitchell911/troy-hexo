@@ -1,5 +1,11 @@
 author: Troy Mitchell
 title: 基于CloudFlare搭建Docker镜像
+date: '2024-07-01 13:14:47'
+updated: '2024-07-02 13:14:54'
+tags:
+  - docker
+categories:
+  - network
 ---
 ## 准备
 - 一个域名
@@ -37,11 +43,11 @@ vim src/index.js
 随后点击Deploy with works即可开始部署。
 
 PS:
-如果Delpoy with works有问题，请修改readme中该按钮的超链接为你自己的仓库地质
+如果Delpoy with works有问题，请修改readme中该按钮的超链接为你自己的仓库地址。
 
 ## Deploy with works
 
-Account id就是https://dash.cloudflare.com/***中的***那一部分
+Account id就是https://dash.cloudflare.com/中/后面的那一部分。
 Token需要自己在该网址进行创建：https://dash.cloudflare.com/profile/api-tokens
 token模板就选择`编辑 Cloudflare Workers`即可。
 
