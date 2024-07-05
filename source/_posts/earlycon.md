@@ -1,5 +1,6 @@
 title: earlycon
 date: '2024-07-03 18:01:54'
+updated: '2024-07-04 12:01:42'
 tags:
   - kernel
   - serial
@@ -823,3 +824,58 @@ static void pxa_early_write(struct console *con, const char *s,
 }
 ```
 
+## 通过early_init_dt_scan_chosen_stdout初始化
+
+```c
+// In drivers/of/fdt.c
+
+#ifdef CONFIG_SERIAL_EARLYCON
+
+int __init early_init_dt_scan_chosen_stdout(void)
+{
+	int offset;
+	const char *p, *q, *options = NULL;
+	int l;
+	const struct earlycon_id *match;
+	const void *fdt = initial_boot_params;
+	int ret;
+
+	offset = fdt_path_offset(fdt, "/chosen");
+	if (offset < 0)
+		offset = fdt_path_offset(fdt, "/chosen@0");
+	if (offset < 0)
+		return -ENOENT;
+
+	p = fdt_getprop(fdt, offset, "stdout-path", &l);
+	if (!p)
+		p = fdt_getprop(fdt, offset, "linux,stdout-path", &l);
+	if (!p || !l)
+		return -ENOENT;
+
+	q = strchrnul(p, ':');
+	if (*q != '\0')
+		options = q + 1;
+	l = q - p;
+
+	/* Get the node specified by stdout-path */
+	offset = fdt_path_offset_namelen(fdt, p, l);
+	if (offset < 0) {
+		pr_warn("earlycon: stdout-path %.*s not found\n", l, p);
+		return 0;
+	}
+
+	for (match = __earlycon_table; match < __earlycon_table_end; match++) {
+		if (!match->compatible[0])
+			continue;
+
+		if (fdt_node_check_compatible(fdt, offset, match->compatible))
+			continue;
+
+		ret = of_setup_earlycon(match, offset, options);
+		if (!ret || ret == -EALREADY)
+			return 0;
+	}
+	return -ENODEV;
+}
+#endif
+```
