@@ -1,6 +1,6 @@
 title: earlycon
 date: '2024-07-03 18:01:54'
-updated: '2024-07-04 12:01:42'
+updated: '2024-07-29 16:24:19'
 tags:
   - kernel
   - serial
@@ -14,7 +14,14 @@ categories:
 
 ## 如何开启earlycon
 
-要在内核启动时启用 `earlycon`，通常需要在内核命令行参数中添加相关设置。例如：
+要在内核启动时启用 `earlycon`，需要在内核配置中启用几个相关的配置选项：
+
+```
+CONFIG_SERIAL_EARLYCON
+CONFIG_OF_EARLY_FLATTREE
+```
+
+还需要在内核命令行参数中添加相关设置。例如：
 
 ```
 earlycon=pxa_serial,0xd4017000
@@ -28,7 +35,7 @@ start_kernel->setup_arch->parse_early_param->parse_early_options->do_early_param
 
 ```c
 // In init/main.c
-void main(void) {
+void start_kernel(void) {
     char *command_line;
     ...
 	setup_arch(&command_line);
@@ -71,9 +78,7 @@ void __init parse_early_options(char *cmdline)
 }
 ```
 
-### parse_args TODO
-
-从这里看到有一个`parse_args`函数，其函数目的是：
+从这里看到有一个`parse_args`函数，其函数目的是`解析键值`对参数并将键值对作为参数`执行`最后一个参数写入的函数指针。
 
 ```c
 // In kernel/params.c
@@ -582,7 +587,7 @@ static int __init register_earlycon(char *buf, const struct earlycon_id *match)
 }
 ```
 
-通过parse_options解析解析参数值：
+通过`parse_options`解析参数值：
 
 ```c
 //In drivers/tty/serial/earlycon.c
@@ -758,8 +763,6 @@ static int __init parse_options(struct earlycon_device *device, char *options)
 
 `if`判断`options`指针是否为空，也就是是否有额外选项。
 
-#### TODO
-
 回到`register_earlycon`函数：
 
 ```c
@@ -825,6 +828,8 @@ static void pxa_early_write(struct console *con, const char *s,
 ```
 
 ## 通过early_init_dt_scan_chosen_stdout初始化
+#### TODO
+
 
 ```c
 // In drivers/of/fdt.c
