@@ -1,6 +1,11 @@
 title: rk3568 sd card无法检测
 date: '2024-07-31 15:00:04'
 updated: '2024-07-31 15:00:06'
+tags:
+  - kernel
+  - linux
+categories:
+  - kernel
 ---
 配置好设备树节点后插入sd卡无法检测。
 
