@@ -301,3 +301,5 @@ CONFIG_COMMON_CLK_RK808
 经过启用`CONFIG_REGULATOR_RK808`选项后，可以正常检测并挂载。
 
 没有测试`CONFIG_REGULATOR_RK808`是否依赖于其他几个选项，直接全部开启了。
+
+ref: https://blog.csdn.net/weixin_49303682/article/details/138390797
