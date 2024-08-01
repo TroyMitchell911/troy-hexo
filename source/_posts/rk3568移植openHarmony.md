@@ -1,4 +1,4 @@
-title: rk3568移植openHarmony
+title: rk3568移植openHarmony v3.1.3
 date: '2024-08-01 16:30:28'
 updated: '2024-08-01 16:44:42'
 tags:
