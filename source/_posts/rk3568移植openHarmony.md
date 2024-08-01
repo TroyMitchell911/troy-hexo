@@ -1,6 +1,6 @@
 title: rk3568移植openHarmony
 date: '2024-08-01 16:30:28'
-updated: '2024-08-01 16:30:30'
+updated: '2024-08-01 16:44:42'
 tags:
   - kernel
   - openHarmony
@@ -26,10 +26,17 @@ sudo apt install libncurses5
 
 ### Source
 
-如果使用`ssh`方式下载的话需要配置`gitee`的`SSH公钥`。
+#### ssh
 
 ```bash
 repo init -u git@gitee.com:openharmony/manifest.git -b refs/tags/OpenHarmony-v3.1.3-Release --no-repo-verify
+repo sync -c
+repo forall -c 'git lfs pull'
+```
+#### https
+
+```bash
+repo init -u https://gitee.com/openharmony/manifest.git -b refs/tags/OpenHarmony-v3.1.3-Release --no-repo-verify
 repo sync -c
 repo forall -c 'git lfs pull'
 ```
