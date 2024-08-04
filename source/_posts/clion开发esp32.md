@@ -1,10 +1,18 @@
 title: clion开发esp32
+date: '2024-08-01 19:35:24'
+updated: '2024-08-04 19:35:29'
 tags:
   - mcu
 categories:
   - ide
   - mcu
 ---
+## README
+
+本文基于文末的`ref`链接搭建，这里作为一些补充记录。
+
+## 安装idf出现错误
+
 在执行`.install.sh`时遇到如下错误：
 
 ```bash
@@ -13,12 +21,7 @@ Detecting the Python interpreter
 Checking "python3" ...
 Python 3.10.12
 "python3" has been detected
-Checking Python compatibility
-Installing ESP-IDF tools
-Updating /home/troy/.espressif/idf-env.json
-Selected targets are: esp32c3, esp32p4, esp32c6, esp32c61, esp32c2, esp32c5, esp32s2, esp32h2, esp32s3, esp32
-Current system platform: linux-amd64
-Installing tools: xtensa-esp-elf-gdb, riscv32-esp-elf-gdb, xtensa-esp-elf, riscv32-esp-elf, esp32ulp-elf, openocd-esp32, esp-rom-elfs
+Checking Python cref: nsa-esp-elf-gdb, riscv32-esp-elf-gdb, xtensa-esp-elf, riscv32-esp-elf, esp32ulp-elf, openocd-esp32, esp-rom-elfs
 Skipping xtensa-esp-elf-gdb@14.2_20240403 (already installed)
 Skipping riscv32-esp-elf-gdb@14.2_20240403 (already installed)
 Skipping xtensa-esp-elf@esp-13.2.0_20240530 (already installed)
@@ -84,4 +87,24 @@ wget https://dl.espressif.com/dl/esp-idf/espidf.constraints.v5.3.txt -O /home/tr
 2024-08-01 15:43:03 (446 MB/s) - 已保存 ‘/home/troy/.espressif/espidf.constraints.v5.3.txt’ [2940/2940])
 ```
 
-ref: https://blog.csdn.net/m0_51719399/article/details/127389279
+## 烧录程序后如何自动打开串口
+
+在经过对配置文件`monitor`的尝试之后，确实以`115200`波特率打开了`/dev/ttyACM0`，但是`console`上显示的字符全是空白，不清楚为什么，所以为`flash`这个`configuration`添加一下可执行文件。
+
+可执行文件内容：
+
+```bash
+#!/bin/bash
+
+idf.py monitor
+```
+
+PS: 由于用到了`idf.py`，所以要执行`export.sh`，在`toolchain`里面的环境变量中可以添加`export.sh`.
+
+![how to install export.sh](https://i.ibb.co/42jkNps/2024-08-04-19-28-11.png)
+
+## Ref
+
+https://github.com/TroyMitchell911/esp32-example-clion
+https://blog.csdn.net/m0_51719399/article/details/127389279
+https://www.bilibili.com/read/cv15226500/
