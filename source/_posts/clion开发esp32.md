@@ -9,7 +9,11 @@ categories:
 ---
 ## README
 
-本文基于文末的`ref`链接搭建，这里作为一些补充记录。
+本文基于文末的`ref`链接[1]搭建，这里作为一些补充记录。
+
+Chip: esp32c3
+
+System: Ubuntu 22.04
 
 ## 安装idf出现错误
 
@@ -89,7 +93,7 @@ wget https://dl.espressif.com/dl/esp-idf/espidf.constraints.v5.3.txt -O /home/tr
 
 ## 烧录程序后如何自动打开串口
 
-在经过对配置文件`monitor`的尝试之后，确实以`115200`波特率打开了`/dev/ttyACM0`，但是`console`上显示的字符全是空白，不清楚为什么，所以为`flash`这个`configuration`添加一下可执行文件。
+在经过对配置文件`monitor`的尝试之后，确实以`115200`波特率打开了`/dev/ttyACM0`，但是`console`上显示的字符全是空白，不清楚为什么，所以为`flash`这个`configuration`添加一下可执行文件，记得勾选上在`输出控制台模拟终端`。
 
 可执行文件内容：
 
@@ -103,8 +107,11 @@ PS: 由于用到了`idf.py`，所以要执行`export.sh`，在`toolchain`里面�
 
 ![how to install export.sh](https://i.ibb.co/42jkNps/2024-08-04-19-28-11.png)
 
+记得勾选上
+
 ## Ref
 
-https://github.com/TroyMitchell911/esp32-example-clion
-https://blog.csdn.net/m0_51719399/article/details/127389279
-https://www.bilibili.com/read/cv15226500/
+[1]: https://blog.csdn.net/m0_51719399/article/details/127389279
+[2]: https://www.bilibili.com/read/cv15226500/
+[3]: https://github.com/TroyMitchell911/esp32-example-clion
+[4]: https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/index.html
