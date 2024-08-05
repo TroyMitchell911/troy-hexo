@@ -73,7 +73,7 @@ Traceback (most recent call last):
   File "/usr/lib/python3.10/subprocess.py", line 369, in check_call
     raise CalledProcessError(retcode, cmd)
 subprocess.CalledProcessError: Command '['/home/troy/.espressif/python_env/idf5.3_py3.10_env/bin/python', '-m', 'pip', 'install', '--no-warn-script-location', '-r', '/home/troy/repo/esp-idf-v5.3/tools/requirements/requirements.core.txt', '--upgrade', '--constraint', '/home/troy/.espressif/espidf.constraints.v5.3.txt', '--extra-index-url', 'https://dl.espressif.com/pypi']' returned non-zero exit status 1.
-``
+```
 
 手动下载：
 
