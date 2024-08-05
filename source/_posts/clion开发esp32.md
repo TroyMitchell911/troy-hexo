@@ -1,6 +1,6 @@
 title: clion开发esp32
 date: '2024-08-01 19:35:24'
-updated: '2024-08-04 19:35:29'
+updated: '2024-08-05 15:16:41'
 tags:
   - mcu
 categories:
@@ -109,9 +109,20 @@ PS: 由于用到了`idf.py`，所以要执行`export.sh`，在`toolchain`里面�
 
 记得勾选上
 
+## 如何通过JTAG进行调试
+
+添加`嵌入式GDB服务器`configuration后按照下图填写参数，需要注意两点：
+
+- `GDB服务器实参`的`cfg文件`请参考链接5[5]
+- 调试器需要选择`esp32`对应的`gdb`，而不是内置的，这点需要在`toolchain`里面去配置路径，跟`gcc`和`g++`在的地方差不多
+
+![how to jtag](https://i.ibb.co/Qf8TRnx/2024-08-05-15-12-56.png)
+
+
 ## Ref
 
 [1]: https://blog.csdn.net/m0_51719399/article/details/127389279
 [2]: https://www.bilibili.com/read/cv15226500/
 [3]: https://github.com/TroyMitchell911/esp32-example-clion
 [4]: https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/index.html
+[5]: https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/tips-and-quirks.html#jtag-debugging-tip-openocd-configure-target
