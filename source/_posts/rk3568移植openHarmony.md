@@ -53,3 +53,6 @@ bash ./build/prebuilts_download.sh
 
 ## ref
 https://doc.embedfire.com/linux/rk356x/OpenHarmony_manual/zh/latest/doc/linux_introduce/ohos-compile.html
+
+
+bash /workspace/v3.2/drivers/hdf_core/adapter/khdf/linux/patch_hdf.sh /workspace/v3.2 /workspace/v3.2/kernel/linux/linux-5.10 /workspace/v3.2/kernel/linux/patches/linux-5.10 rk3568
