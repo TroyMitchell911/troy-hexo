@@ -3,8 +3,10 @@ date: '2024-08-01 19:35:24'
 updated: '2024-08-05 15:16:41'
 tags:
   - mcu
+  - esp32
 categories:
   - mcu
+  - esp32
 ---
 ## README
 
