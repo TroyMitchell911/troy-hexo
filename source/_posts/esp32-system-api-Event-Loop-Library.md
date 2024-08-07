@@ -99,17 +99,17 @@ enum {
 
 该章节涵盖了常用API以及简介，欲知更详细，请见[1]
 
-- esp_event_loop_create:  该函数创建了`事件循环`，两个入参一个是`事件循环句柄`，一个是`事件循环参数`。
-- esp_event_loop_create_default: 该函数创建了默认的事件循环，由于一些事件的推送不能由用户提交到队列，如wifi连接事件，获取ip事件等，所以便有了默认的事件循环，具体见[4]
-- esp_event_loop_delete: 删除事件循环，入参是`事件循环句柄`。
-- esp_event_loop_delete_default: 删除默认事件循环
-- esp_event_handler_register_with: 注册`事件处理函数`到某个`事件循环`，需要提供该事件处理函数所处理的`EVENT_BASE`和`EVENT_ID`，一个`事件处理函数`可用不同的`EVENT`注册多次，也可以使用`ESP_EVENT_ANY_ID`去处理整个`EVENT_BASE`下的`ID`
-- esp_event_handler_unregister_with: 注销某个`事件处理函数`
-- esp_event_handler_register: 为`默认事件循环`注册`事件处理函数`，除了不需要提供`事件循环句柄`以外，与`esp_event_handler_register`无异。
-- esp_event_handler_unregister: 为`默认事件循环`注销`事件处理函数`，除了不需要提供`事件循环句柄`以外，与`esp_event_handler_register`无异。
-- esp_event_post_to: 向指定的`事件循环`发送事件。
-- esp_event_post: 向默认的`事件循环`发送事件
-- esp_event_loop_run: 当在事件循环参数内没有配置`task_name`时，就不用有`专有线程`去读取`队列`并且执行`事件处理函数`，此时需要调用`esp_event_loop_run`手动读取并调用`事件处理函数`，该函数两个入参分别为`事件循环句柄`和`运行tick`
+- `esp_event_loop_create`:  该函数创建了`事件循环`，两个入参一个是`事件循环句柄`，一个是`事件循环参数`。
+- `esp_event_loop_create_default`: 该函数创建了默认的事件循环，由于一些事件的推送不能由用户提交到队列，如wifi连接事件，获取ip事件等，所以便有了默认的事件循环，具体见[4]
+- `esp_event_loop_delete:` 删除事件循环，入参是`事件循环句柄`。
+- `esp_event_loop_delete_default`: 删除默认事件循环
+- `esp_event_handler_register_with`: 注册`事件处理函数`到某个`事件循环`，需要提供该事件处理函数所处理的`EVENT_BASE`和`EVENT_ID`，一个`事件处理函数`可用不同的`EVENT`注册多次，也可以使用`ESP_EVENT_ANY_ID`去处理整个`EVENT_BASE`下的`ID`
+- `esp_event_handler_unregister_with`: 注销某个`事件处理函数`
+- `esp_event_handler_register`: 为`默认事件循环`注册`事件处理函数`，除了不需要提供`事件循环句柄`以外，与`esp_event_handler_register`无异。
+- `esp_event_handler_unregister`: 为`默认事件循环`注销`事件处理函数`，除了不需要提供`事件循环句柄`以外，与`esp_event_handler_register`无异。
+- `esp_event_post_to`: 向指定的`事件循环`发送事件。
+- `esp_event_post`: 向默认的`事件循环`发送事件
+- `esp_event_loop_run`: 当在事件循环参数内没有配置`task_name`时，就不用有`专有线程`去读取`队列`并且执行`事件处理函数`，此时需要调用`esp_event_loop_run`手动读取并调用`事件处理函数`，该函数两个入参分别为`事件循环句柄`和`运行tick`
 
 ## Ref
 [1]https://docs.espressif.com/projects/esp-idf/zh_CN/v5.3/esp32/api-reference/system/esp_event.html
