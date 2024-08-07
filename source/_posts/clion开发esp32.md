@@ -4,7 +4,6 @@ updated: '2024-08-05 15:16:41'
 tags:
   - mcu
 categories:
-  - ide
   - mcu
 ---
 ## README
