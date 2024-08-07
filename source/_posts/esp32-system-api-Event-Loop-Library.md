@@ -95,7 +95,7 @@ enum {
 };
 ```
 
-## API介绍
+## API
 
 该章节涵盖了常用API以及简介，欲知更详细，请见[1]
 
@@ -110,6 +110,117 @@ enum {
 - `esp_event_post_to`: 向指定的`事件循环`发送事件。
 - `esp_event_post`: 向默认的`事件循环`发送事件
 - `esp_event_loop_run`: 当在事件循环参数内没有配置`task_name`时，就不用有`专有线程`去读取`队列`并且执行`事件处理函数`，此时需要调用`esp_event_loop_run`手动读取并调用`事件处理函数`，该函数两个入参分别为`事件循环句柄`和`运行tick`
+
+## Example
+
+### 用户事件循环
+
+#### 专属线程
+
+```c
+/* 事件循环句柄 */
+esp_event_loop_handle_t loop_with_task;
+
+ESP_EVENT_DECLARE_BASE(TASK_EVENTS);         // declaration of the task events family
+
+enum {
+    TASK_ITERATION_EVENT                     // raised during an iteration of the loop within the task
+};
+
+static void task_iteration_handler(void* handler_args, esp_event_base_t base, int32_t id, void* event_data)
+{
+    // Two types of data can be passed in to the event handler: the handler specific data and the event-specific data.
+    //
+    // The handler specific data (handler_args) is a pointer to the original data, therefore, the user should ensure that
+    // the memory location it points to is still valid when the handler executes.
+    //
+    // The event-specific data (event_data) is a pointer to a deep copy of the original data, and is managed automatically.
+    int iteration = *((int*) event_data);
+
+    char* loop;
+
+    if (handler_args == loop_with_task) {
+        loop = "loop_with_task";
+    } else {
+        loop = "loop_without_task";
+    }
+
+    ESP_LOGI(TAG, "handling %s:%s from %s, iteration %d", base, "TASK_ITERATION_EVENT", loop, iteration);
+}
+
+void app_main(void) {
+    /* 事件循环参数 有专属任务*/ 
+    esp_event_loop_args_t loop_with_task_args = {
+            /* 队列大小 */ 
+            .queue_size = 5,
+            .task_name = "loop_task", // task will be created
+            /* 当前创建事件循环的任务的优先级 */
+            .task_priority = uxTaskPriorityGet(NULL),
+            /* 堆栈大小 */ 
+            .task_stack_size = 3072,
+            /* 不指定任何核心，由系统指派 */ 
+            .task_core_id = tskNO_AFFINITY
+    };
+
+    /* 创建事件循环 */
+    ESP_ERROR_CHECK(esp_event_loop_create(&loop_with_task_args, &loop_with_task));
+
+    /* 注册事件处理函数 */ 
+    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(loop_with_task, TASK_EVENTS, TASK_ITERATION_EVENT, task_iteration_handler, loop_with_task, NULL));
+}
+```
+
+#### 没有专属线程
+
+```c
+/* 事件循环句柄 */
+esp_event_loop_handle_t loop_without_task;
+
+ESP_EVENT_DECLARE_BASE(TASK_EVENTS);         // declaration of the task events family
+
+enum {
+    TASK_ITERATION_EVENT                     // raised during an iteration of the loop within the task
+};
+
+static void task_iteration_handler(void* handler_args, esp_event_base_t base, int32_t id, void* event_data)
+{
+    // Two types of data can be passed in to the event handler: the handler specific data and the event-specific data.
+    //
+    // The handler specific data (handler_args) is a pointer to the original data, therefore, the user should ensure that
+    // the memory location it points to is still valid when the handler executes.
+    //
+    // The event-specific data (event_data) is a pointer to a deep copy of the original data, and is managed automatically.
+    int iteration = *((int*) event_data);
+
+    char* loop;
+
+    if (handler_args == loop_with_task) {
+        loop = "loop_with_task";
+    } else {
+        loop = "loop_without_task";
+    }
+
+    ESP_LOGI(TAG, "handling %s:%s from %s, iteration %d", base, "TASK_ITERATION_EVENT", loop, iteration);
+}
+
+void app_main(void) {
+    /* 事件循环参数 没有专属任务
+        在post_to之后需要在线程中
+        调用esp_event_loop_run(loop_without_task, 100);
+        否则无法进入事件处理函数
+    */ 
+    esp_event_loop_args_t loop_without_task_args = {
+        .queue_size = 5,
+        .task_name = NULL // no task will be created
+    };
+
+    /* 创建事件循环 */
+    ESP_ERROR_CHECK(esp_event_loop_create(&loop_without_task_args, &loop_without_task));
+
+    /* 注册事件处理函数 */ 
+    ESP_ERROR_CHECK(esp_event_handler_instance_register_with(loop_with_task, TASK_EVENTS, TASK_ITERATION_EVENT, task_iteration_handler, loop_with_task, NULL));
+}
+```
 
 ## Ref
 [1]https://docs.espressif.com/projects/esp-idf/zh_CN/v5.3/esp32/api-reference/system/esp_event.html
