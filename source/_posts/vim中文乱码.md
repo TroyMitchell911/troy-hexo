@@ -1,4 +1,8 @@
 title: vim中文乱码
+date: '2024-08-07 14:39:40'
+updated: '2024-08-07 14:39:42'
+tags:
+  - vim
 ---
 ```bash
 vim ~/.vimrc
