@@ -2,8 +2,6 @@ title: vim快捷操作
 date: '2024-07-02 22:42:21'
 tags:
   - vim
-categories:
-  - ide
 ---
 ## 快速定位
 

@@ -3,8 +3,6 @@ date: '2024-07-02 19:30:17'
 tags:
   - vim
   - ubuntu
-categories:
-  - ide
 ---
 ## 环境
 - Ubuntu22.04
