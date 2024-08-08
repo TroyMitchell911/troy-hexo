@@ -4,8 +4,11 @@ updated: '2024-08-01 16:44:42'
 tags:
   - kernel
   - openHarmony
+  - rk3568
+  - rockchip
 categories:
   - kernel
+  - rockchip
 ---
 ## Env
 System: Ubuntu 20.04
