@@ -4,8 +4,11 @@ updated: '2024-07-31 15:00:06'
 tags:
   - kernel
   - linux
+  - rk3568
+  - rockchip
 categories:
   - kernel
+  - rockchip
 ---
 配置好设备树节点后插入sd卡无法检测。
 
