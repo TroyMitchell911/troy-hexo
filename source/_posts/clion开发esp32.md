@@ -10,7 +10,7 @@ categories:
 ---
 ## README
 
-本文基于文末的`ref`链接[1]搭建，这里作为一些补充记录。
+本文基于文末的`ref`链接[Link1]搭建，这里作为一些补充记录。
 
 Chip: esp32c3
 
@@ -122,8 +122,8 @@ PS: 由于用到了`idf.py`，所以要执行`export.sh`，在`toolchain`里面�
 
 ## Ref
 
-[1]: https://blog.csdn.net/m0_51719399/article/details/127389279
-[2]: https://www.bilibili.com/read/cv15226500/
-[3]: https://github.com/TroyMitchell911/esp32-example-clion
-[4]: https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/index.html
-[5]: https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/tips-and-quirks.html#jtag-debugging-tip-openocd-configure-target
+[Link1]https://blog.csdn.net/m0_51719399/article/details/127389279
+[Link2]https://www.bilibili.com/read/cv15226500/
+[Link3]https://github.com/TroyMitchell911/esp32-example-clion
+[Link4]https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/index.html
+[Link5]https://docs.espressif.com/projects/esp-idf/zh_CN/stable/esp32c3/api-guides/jtag-debugging/tips-and-quirks.html#jtag-debugging-tip-openocd-configure-target
