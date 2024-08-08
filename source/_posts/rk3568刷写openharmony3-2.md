@@ -4,8 +4,12 @@ updated: '2024-07-25 20:15:05'
 tags:
   - linux
   - kernel
+  - openHarmony
+  - rk3568
+  - rockchip
 categories:
   - kernel
+  - rockchip
 ---
 ```bash
 sudo upgrade_tool di -p parameter.txt
