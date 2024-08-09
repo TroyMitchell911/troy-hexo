@@ -6,7 +6,7 @@ categories:
   - mcu
   - esp32
 ---
-在c++使用espidf进行wifi连接时，发现如下代码可以连接：
+在`c++`使用`espidf`进行`wifi`连接时，发现如下代码可以连接：
 
 ```c++
 wifi_config_t wifi_config = {
@@ -24,7 +24,7 @@ strcpy(wifi_config.sta.ssid, "HBDT-23F");
 strcpy(wifi_config.sta.password, "hbishbis");
 ```
 
-经过排查发现espidf对于连接阶段除了ssid和password还使用到了其他变量，所以应该清零结构体内存：
+经过排查发现`espidf`对于连接阶段除了`ssid`和`password`还使用到了其他变量，所以应该清零结构体内存：
 
 ```c++
 wifi_config_t wifi_config{};
