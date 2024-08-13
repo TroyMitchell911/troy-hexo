@@ -1,6 +1,6 @@
 title: '[逆向破解]Oscal Pad70---提取系统分区'
 date: '2024-08-12 20:23:25'
-updated: '2024-08-12 21:23:46'
+updated: '2024-08-13 22:40:48'
 tags:
   - kernel
   - linux
@@ -13,15 +13,15 @@ categories:
 ---
 ## Starting
 
-Oscal Pad70实物图：
+`Oscal Pad70`实物图：
 
 ![oscal pad70](https://i.imghippo.com/files/Ct0oQ1723469150.jpg)
 
-由官网可知，Oscal Pad70是使用rk3566作为主控：
+由官网可知，`Oscal Pad70`是使用`rk3566`作为主控：
 
 ![oscal pad70 website](https://i.imghippo.com/files/wqrko1723469276.png)
 
-这台设备并没有关闭adb，使用adb命令可以很轻松的查看到adb的设备。
+这台设备并没有关闭`adb`，使用`adb`命令可以很轻松的查看到`adb`的设备。
 
 ```bash
 ❯ adb devices
@@ -33,7 +33,7 @@ Pad70_Pro:/ $ cat /proc/version
 Linux version 5.10.168-android13-4-00008-g33b1e2eb04dc-ab10159773 (build-user@build-host) (Android (8508608, based on r450784e) clang version 14.0.7 (https://android.googlesource.com/toolchain/llvm-project 4c603efb0cca074e9238af8b4106c30add4418f6), LLD 14.0.7) #1 SMP PREEMPT Thu May 11 18:17:05 UTC 2023
 ```
 
-不出意料的是5.10版本的内核。
+不出意料的是`5.10`版本的内核。
 
 ## 备份分区
 
@@ -76,7 +76,7 @@ lrwxrwxrwx 1 root root 21 2024-08-11 20:21 vendor_boot_b -> /dev/block/mmcblk2p1
 
 可以看到文件超级多，没办法，是个体力活了。
 
-从系统分区的_a和_b能够看出来，使用的是采用了 A/B（双系统）分区结构。这种分区结构常用于安卓设备，以实现无缝系统更新。
+从系统分区的`_a`和`_b`能够看出来，使用的是采用了` A/B（双系统）`分区结构。这种分区结构常用于安卓设备，以实现无缝系统更新。
 
 > 双分区： 在 A/B 分区结构中，关键的系统分区（如 boot、system、vendor 等）被复制成两份，分别为 A（_a 后缀）和 B（_b 后缀）分区。
 系统更新： 当有新的系统更新时，系统会将更新写入未使用的分区（例如当前使用 A 分区时会更新 B 分区）。更新完成后，设备会切换到更新后的分区启动。
@@ -88,7 +88,7 @@ Pad70_Pro:/mnt/backup # getprop ro.boot.slot_suffix
 _a
 ```
 
-正在使用的分区是_a，所以_b的我们就不用提取了。
+正在使用的分区是`_a`，所以`_b`的我们就不用提取了。
 
 使用如下命令提取分区：
 
@@ -104,7 +104,7 @@ dd: backup.img: Read-only file system
 - 重新挂载
 - 找一个可写的目录
 
-这里偷懒使用/data，不重新挂载了：
+这里偷懒使用`/data`，不重新挂载了：
 
 ```bash
 cd /data && mkdir back && cd back
@@ -127,14 +127,19 @@ dd if=/dev/block/mmcblk2p4 of=trust_a.img
 dd if=/dev/block/mmcblk2p2 of=uboot_a.img
 dd if=/dev/block/mmcblk2p15 of=vbmeta_a.img
 dd if=/dev/block/mmcblk2p9 of=vendor_boot_a.img
-dd if=/dev/block/mmcblk2p25 of=userdata.img && dd if=/dev/block/mmcblk2 of=mmcblk2.img
+
 ```
 
-使用pull命令拉取到本地文件夹：
+这里有一个问题，就是如果在/data提取userdata分区的话，就会导致递归读取，直到内存耗尽，所以我们还是插入一张sd卡吧，在提取userdata分区时，先把之前备份的文件导出，然后删除。
+
+使用`pull`命令拉取到本地文件夹：
 
 ```bash
 ❯ adb pull /data/back/
+/data/back/: 26 files pulled. 35.7 MB/s (5431099392 bytes in 144.983s)
 ```
+
+
 
 ## Ref
 
