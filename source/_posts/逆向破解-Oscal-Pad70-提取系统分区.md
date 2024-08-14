@@ -1,6 +1,6 @@
 title: '[逆向破解]Oscal Pad70---提取系统分区'
 date: '2024-08-12 20:23:25'
-updated: '2024-08-13 22:40:48'
+updated: '2024-08-14 19:41:31'
 tags:
   - kernel
   - linux
@@ -103,11 +103,13 @@ dd: backup.img: Read-only file system
 发现根目录是以只读方式挂载的，所以两种方案：
 - 重新挂载
 - 找一个可写的目录
+- 插入sd卡
 
-这里偷懒使用`/data`，不重新挂载了：
+这里偷懒插了一张`sd卡`，省去很多麻烦：
 
 ```bash
-cd /data && mkdir back && cd back
+# 注意这里的6EBE-F0F5可能有所不同
+cd /storage/6EBE-F0F5 && mkdir backup && cd backup
 
 dd if=/dev/block/mmcblk2p19 of=backup.img   
 dd if=/dev/block/mmcblk2p23 of=baseparameter    
@@ -127,10 +129,8 @@ dd if=/dev/block/mmcblk2p4 of=trust_a.img
 dd if=/dev/block/mmcblk2p2 of=uboot_a.img
 dd if=/dev/block/mmcblk2p15 of=vbmeta_a.img
 dd if=/dev/block/mmcblk2p9 of=vendor_boot_a.img
-
+dd if=/dev/block/mmcblk2p25 of=userdata.img && dd if=/dev/block/mmcblk2 of=mmcblk2.img
 ```
-
-这里有一个问题，就是如果在/data提取userdata分区的话，就会导致递归读取，直到内存耗尽，所以我们还是插入一张sd卡吧，在提取userdata分区时，先把之前备份的文件导出，然后删除。
 
 使用`pull`命令拉取到本地文件夹：
 
