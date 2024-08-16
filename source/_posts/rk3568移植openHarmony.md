@@ -10,10 +10,10 @@ categories:
   - kernel
   - rockchip
 ---
-## Env
+# Env
 System: Ubuntu 20.04
 
-### Package
+## Package
 安装编译所需要的软件包：
 
 ```bash
@@ -27,16 +27,16 @@ openjdk-8-jdk genext2fs libopencv-dev lz4 libssl-dev libncurses5 git-lfs lib32z1
 sudo apt install libncurses5
 ```
 
-### Source
+## Source
 
-#### ssh
+### ssh
 
 ```bash
 repo init -u git@gitee.com:openharmony/manifest.git -b refs/tags/OpenHarmony-v3.1.3-Release --no-repo-verify
 repo sync -c
 repo forall -c 'git lfs pull'
 ```
-#### https
+### https
 
 ```bash
 repo init -u https://gitee.com/openharmony/manifest.git -b refs/tags/OpenHarmony-v3.1.3-Release --no-repo-verify
@@ -44,7 +44,7 @@ repo sync -c
 repo forall -c 'git lfs pull'
 ```
 
-### Toolchains
+## Toolchains
 
 对于这一步，如果你有开启`proxy`的话，请关闭。
 
@@ -53,7 +53,7 @@ repo forall -c 'git lfs pull'
 bash ./build/prebuilts_download.sh
 ```
 
-## Build
+# Build
 
 在移植之前，请先编译一次原版：
 
@@ -61,5 +61,5 @@ bash ./build/prebuilts_download.sh
 ./build.sh --product-name rk3568 --ccache
 ```
 
-## ref
+# ref
 https://doc.embedfire.com/linux/rk356x/OpenHarmony_manual/zh/latest/doc/linux_introduce/ohos-compile.html
