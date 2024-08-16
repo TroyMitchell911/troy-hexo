@@ -129,7 +129,7 @@ dd if=/dev/block/mmcblk2p4 of=trust_a.img
 dd if=/dev/block/mmcblk2p2 of=uboot_a.img
 dd if=/dev/block/mmcblk2p15 of=vbmeta_a.img
 dd if=/dev/block/mmcblk2p9 of=vendor_boot_a.img
-dd if=/dev/block/mmcblk2p25 of=userdata.img && dd if=/dev/block/mmcblk2 of=mmcblk2.img
+dd if=/dev/block/mmcblk2p25 of=userdata.img bs=1M count=9216
 ```
 
 使用`pull`命令拉取到本地文件夹：

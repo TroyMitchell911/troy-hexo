@@ -1,6 +1,6 @@
-title: rk3568移植openHarmony v3.1.3
+title: rk3568移植openHarmony v3.2.3---环境准备
 date: '2024-08-01 16:30:28'
-updated: '2024-08-01 16:44:42'
+updated: '2024-08-16 13:17:04'
 tags:
   - kernel
   - openHarmony
@@ -53,9 +53,13 @@ repo forall -c 'git lfs pull'
 bash ./build/prebuilts_download.sh
 ```
 
+## Build
+
+在移植之前，请先编译一次原版：
+
+```bash
+./build.sh --product-name rk3568 --ccache
+```
 
 ## ref
 https://doc.embedfire.com/linux/rk356x/OpenHarmony_manual/zh/latest/doc/linux_introduce/ohos-compile.html
-
-
-bash /workspace/v3.2/drivers/hdf_core/adapter/khdf/linux/patch_hdf.sh /workspace/v3.2 /workspace/v3.2/kernel/linux/linux-5.10 /workspace/v3.2/kernel/linux/patches/linux-5.10 rk3568
