@@ -1,6 +1,6 @@
 title: rk3568移植openHarmony v3.2.3---系统移植
 date: '2024-08-16 17:32:14'
-updated: '2024-08-16 17:32:16'
+updated: '2024-08-19 15:34:27'
 tags:
   - openHarmony
   - kernel
@@ -38,7 +38,7 @@ index 4bd1e65..c205e0b 100755
 +		${ROOT_DIR}/kernel/linux/patches/linux-5.10/rk3568_patch/$YOUR_BOARD_NAME.patch
 +		${ROOT_DIR}/kernel/linux/patches/linux-5.10/rk3568_patch/add-jl201-drivers.patch"
  KERNEL_CONFIG_FILE=${ROOT_DIR}/kernel/linux/config/linux-5.10/arch/arm64/configs/rk3568_standard_defconfig
-+KERNEL_CONFIG_PATCH=${ROOT_DIR}/kernel/linux/patches/linux-5.10/${YOUR_BOARD_NAME}_config.path
++KERNEL_CONFIG_PATCH=${ROOT_DIR}/kernel/linux/patches/linux-5.10/${YOUR_BOARD_NAME}_config.patch
  NEWIP_PATCH_FILE=${ROOT_DIR}/foundation/communication/sfc/newip/apply_newip.sh
  
  rm -rf ${KERNEL_SRC_TMP_PATH}
