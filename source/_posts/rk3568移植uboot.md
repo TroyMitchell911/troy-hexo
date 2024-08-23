@@ -127,6 +127,19 @@ arch   cmd     disk     dts  fs       lib         u-boot-spl.lds  u-boot-tpl.bin
 board  common  drivers  env  include  u-boot.cfg  u-boot-tpl      u-boot-tpl-dtb.bin  u-boot-tpl-nodtb.bin
 ```
 
+将这两个文件打包成loader镜像：
+
+```bash
+❯ tools/mkimage -n rk3399 -T rksd -d tpl/u-boot-tpl.bin idbloader.img
+Image Type:   Rockchip RK33 (SD/MMC) boot image
+Init Data Size: 2048 bytes
+❯ ll idbloader.img
+-rw-rw-r-- 1 troy troy 4.0K  8月 23 16:39 idbloader.img
+❯ cat spl/u-boot-spl.bin >> idbloader.img
+❯ ll idbloader.img
+-rw-rw-r-- 1 troy troy 244K  8月 23 16:39 idbloader.img
+```
+
 ### 闭源方式
 
 在官方固件加载方式中，我们基于`Rockchip rkbin`官方给的`ddr.bin`、`miniloader.bin`来实现的: https://github.com/Caesar-github/rkbin
