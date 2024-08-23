@@ -68,6 +68,8 @@ distro_bootcmd=for target in ${boot_targets}; do run bootcmd_${target}; done
 
 ```
 
+### BOOTENV
+
 在这个`BOOTENV`宏定义中，定义了`distro_bootcmd`的值，`BOOTENV`在`include/configs/rk3568_common.h`中被使用到：
 
 ```c#define CONFIG_EXTRA_ENV_SETTINGS \
@@ -137,6 +139,8 @@ const uchar default_environment[] = {
 #define BOOTENV_BOOT_TARGETS \
 	"boot_targets=" BOOT_TARGET_DEVICES(BOOTENV_DEV_NAME) "\0"
 ```
+
+### BOOTENV_BOOT_TARGETS生成boot_targets字符串
 
 通过`BOOTENV_BOOT_TARGETS`宏定义生成了`boot_targets`字符串：
 
@@ -237,6 +241,8 @@ boot_targets=mmc1 mmc0 mtd2 mtd1 mtd0 usb0 pxe dhcp
 ```
 
 `boot_targets`分析完了，但这只是我们`distro_bootcmd`循环的变量而已，还有一个`run bootcmd_${target};`没有分析，通过`boot_targets`能知道，这运行的大概就是`bootcmd_mmc0`, `bootcmd_mmc1`这样的东西。
+
+### 生成distro_cmd运行命令
 
 在`BOOTENV`中有一个宏调用是`BOOT_TARGET_DEVICES(BOOTENV_DEV)`（上文BOOTENV代码中贴了），现在回顾一下`BOOT_TARGET_DEVICES`: 
 
