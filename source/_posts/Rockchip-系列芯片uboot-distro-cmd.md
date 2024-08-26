@@ -1,6 +1,6 @@
 title: rk3568 uboot distro_cmd
 date: '2024-08-23 16:12:48'
-updated: '2024-08-23 16:12:50'
+updated: '2024-08-26 10:34:18'
 tags:
   - rk3568
   - rockchip
@@ -278,7 +278,7 @@ boot_targets=mmc1 mmc0 mtd2 mtd1 mtd0 usb0 pxe dhcp
 	BOOTENV_DEV(MMC, mmc, 0)"\0"
     ->
     "bootcmd_mmc1=setenv devnum 1;run mmc1_boot\0" \
-    "bootcmd_mmc1=setenv devnum 0;run mmc0_boot\0" \
+    "bootcmd_mmc0=setenv devnum 0;run mmc0_boot\0" \
 ```
 
 
