@@ -1,6 +1,6 @@
 title: home assistant远程访问
 date: '2024-08-24 16:55:09'
-updated: '2024-08-24 16:55:11'
+updated: '2024-08-26 10:36:46'
 tags:
   - home-assistant
 categories:
@@ -30,3 +30,7 @@ http:
 ```
 
 重启`ha`，问题解决
+
+## Ref
+
+https://cloud.tencent.com/developer/article/2260090
