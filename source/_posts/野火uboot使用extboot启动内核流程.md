@@ -1,6 +1,6 @@
 title: 野火uboot使用extboot启动内核流程
 date: '2024-08-26 15:43:00'
-updated: '2024-08-27 11:15:29'
+updated: '2024-08-27 11:34:46'
 tags:
   - rockchip
   - rk3568
@@ -144,6 +144,8 @@ boot_a_script=load ${devtype} ${devnum}:${distro_bootpart} ${scriptaddr} ${prefi
 scriptaddr=0x00c00000
 ```
 
+### TODO:查看野火boot分区下boot.scr
+
 ## scan_dev_for_extlinux
 
 查看`scan_dev_for_extlinux`:
@@ -170,6 +172,81 @@ scriptaddr=0x00c00000
 => printenv boot_extlinux 
 boot_extlinux=sysboot ${devtype} ${devnum}:${distro_bootpart} any ${scriptaddr} ${prefix}extlinux/extlinux.conf
 ```
+
+`boot_extlinux`中实际调用了`sysboot`命令，`sysboot` 是一个 `U-Boot` 命令，用于从特定设备和文件系统加载并启动 `Syslinux` 引导文件。`Syslinux` 是一个轻量级的引导加载程序，通常用于引导 `Linux` 内核。
+
+### sysboot
+
+命令格式如下：
+
+```bash
+sysboot [-p] <interface> <dev[:part]> <ext2|fat|any> [addr] [filename]
+```
+
+- -p: 可选参数，表示使用 "pxelinux" 格式的配置文件。
+- <interface>: 设备接口类型，例如 mmc、usb、scsi、eth 等。
+- <dev[:part]>: 设备号和可选的分区号。例如，0:1 表示设备 0 的第 1 分区。
+- <ext2|fat|any>: 文件系统类型，可以是 ext2、fat 或 any。其中 any 会自动检测文件系统类型。
+- [addr]: 可选参数，表示将文件加载到内存中的地址。
+- [filename]: 可选参数，要加载和解析的 Syslinux 配置文件名，通常是 syslinux.cfg 或 extlinux.conf。
+
+所以`boot_extlinux`中就是将`${devtype} ${devnum}:${distro_bootpart}`分区中的`${prefix}extlinux/extlinux.conf`文件加载到`{scriptaddr}`去用`sysboot`运行，该分区的文件系统类型设置为`any`意思就是让`uboot`自动检测文件系统类型。
+
+### cfg文件
+
+
+Syslinux 配置文件（通常命名为 syslinux.cfg 或 extlinux.conf）用于指定启动项和相关参数。这个文件的格式比较简单，通常包含启动菜单和内核启动选项。以下是一个典型的 syslinux.cfg 配置文件示例：
+
+```
+DEFAULT linux
+PROMPT 0
+TIMEOUT 50
+
+LABEL linux
+    KERNEL /boot/vmlinuz
+    APPEND root=/dev/sda1 ro quiet
+    INITRD /boot/initrd.img
+```
+
+- DEFAULT: 指定默认启动项的标签（如 LABEL 中定义的名称）。
+- PROMPT: 设置是否显示引导菜单。0 表示不显示，直接启动默认项；1 表示显示引导菜单。
+- TIMEOUT: 设置等待时间（以1/10秒为单位）。例如，50 表示等待5秒，然后启动默认项。
+- LABEL: 定义一个启动项，并给它一个名称（如 linux）。
+	- KERNEL: 指定要启动的内核文件路径。
+	- APPEND: 向内核传递的启动参数。例如，root=/dev/sda1 ro quiet 表示根文件系统在 /- dev/sda1，只读挂载，并且启动时保持静默模式。
+	- INITRD: 指定初始 RAM 磁盘映像（initrd）文件的路径，通常用于加载必要的驱动程序和文件系统支持。
+
+还可以使用**更高级的选项**：
+
+- SAY: 显示消息给用户。
+- MENU DEFAULT: 指定一个菜单项为默认选项。
+- FALLBACK: 在默认启动项失败时，指定一个后备启动项。
+- MENU LABEL: 给每个启动项设置一个显示在菜单中的名称。
+- single: 在 APPEND 中添加 single 参数将 Linux 以单用户模式启动，通常用于故障排查。
+
+```
+DEFAULT linux
+PROMPT 1
+TIMEOUT 100
+
+SAY Hello! Welcome to the Syslinux bootloader.
+
+LABEL linux
+    MENU LABEL Start Linux
+    KERNEL /boot/vmlinuz
+    APPEND root=/dev/sda1 ro quiet
+    INITRD /boot/initrd.img
+    MENU DEFAULT
+
+LABEL fallback
+    MENU LABEL Fallback Linux
+    KERNEL /boot/vmlinuz
+    APPEND root=/dev/sda2 ro single
+    INITRD /boot/initrd.img
+    FALLBACK
+```
+
+### TODO:查看野火boot分区下extlinux.conf`
 
 ## Ref
 
