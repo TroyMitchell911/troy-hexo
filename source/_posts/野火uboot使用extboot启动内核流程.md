@@ -1,6 +1,6 @@
 title: 野火uboot使用extboot启动内核流程
 date: '2024-08-26 15:43:00'
-updated: '2024-08-27 11:34:46'
+updated: '2024-08-27 13:30:53'
 tags:
   - rockchip
   - rk3568
@@ -246,7 +246,57 @@ LABEL fallback
     FALLBACK
 ```
 
-### TODO:查看野火boot分区下extlinux.conf`
+这里需要重点说明的是设备树相关的问题，如果想指定设备树，需要以这样的格式进行指定：
+
+```
+FDT /your-device-tree.dtb
+```
+
+或者不明确指定设备树，但指定设备树所存在的文件夹，可以用`devicetreedir`或者`fdtdir`去指定。
+
+```
+devicetreedir /
+```
+
+或者是
+
+```
+fdtdir/
+```
+
+如果是使用指定设备树文件夹，不明确指定设备树的方式，`uboot`会使用以下策略来查找设备树：
+
+- 自动选择: U-Boot 可能会自动选择与内核文件同名或类似名称的 .dtb 文件。如果内核名是 Image-4.19.232，那么它可能会尝试查找 Image-4.19.232.dtb 或其他类似名称的设备树文件。
+- 在 U-Boot 中，可以通过环境变量（如 fdtfile）指定设备树文件的路径。如果没有在 extlinux.conf 中明确指定设备树，U-Boot 可能会使用这些环境变量中定义的路径。
+
+### 查看野火boot分区下extlinux.conf
+
+```bash
+root@lubancat:/boot# cat extlinux/extlinux.conf 
+label kernel-4.19.232
+        kernel /Image-4.19.232
+        devicetreedir /
+        append  root=/dev/mmcblk0p3 earlyprintk console=ttyFIQ0 console=tty1 consoleblank=0 loglevel=7 rootwait rw rootfstype=ext4 cgroup_enable=cpuset
+ cgroup_memory=1 cgroup_enable=memory swapaccount=1 switolb=1 coherent_pool=1m
+```
+
+可以看到野火的`conf`文件并没有明确指定设备树，而是指定了一个设备树文件夹，查看设备树文件：
+
+```bash
+root@lubancat:/boot# ls *.dtb
+rk-kernel.dtb
+root@lubancat:/boot# ls Image-4.19.232 
+Image-4.19.232
+```
+
+可以看到并没有与内核同名的设备树文件，那么一定是使用了`fdtfile`变量来指定设备树。
+
+进入`uboot`查看`fdtfile`:
+
+```bash
+=> printenv fdtfile 
+fdtfile=rk-kernel.dtb
+```
 
 ## Ref
 
