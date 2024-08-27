@@ -1,6 +1,6 @@
 title: 野火uboot使用extboot启动内核流程
 date: '2024-08-26 15:43:00'
-updated: '2024-08-26 15:43:02'
+updated: '2024-08-27 11:15:29'
 tags:
   - rockchip
   - rk3568
@@ -46,7 +46,7 @@ scan_dev_for_boot_part=part list ${devtype} ${devnum} -bootable devplist; env ex
  do if fstype ${devtype} ${devnum}:${distro_bootpart} bootfstype; then run scan_dev_for_boot; fi; done
 ```
 
-### scan_dev_for_boot_part
+## scan_dev_for_boot_part
 
 在`scan_dev_for_boot_part`阶段就比较复杂了，在uboot中不方便查看，我们转到头文件查看：
 
@@ -71,7 +71,7 @@ scan_dev_for_boot_part=part list ${devtype} ${devnum} -bootable devplist; env ex
     - 在`for`循环中输出`${devtype} ${devnum}:${distro_bootpart}`的文件类型给`bootfstype`变量
     - 运行`scan_dev_for_boot`
 
-### scan_dev_for_boot
+## scan_dev_for_boot
 
 查看`scan_dev_for_boot`:
 
@@ -99,7 +99,7 @@ boot_prefixes=/ /boot/
 
 就是一个`boot`的前缀，一个是`/`一个是`/boot/`。
 
-### scan_dev_for_scripts
+## scan_dev_for_scripts
 
 查看`scan_dev_for_scripts`:
 
@@ -144,7 +144,7 @@ boot_a_script=load ${devtype} ${devnum}:${distro_bootpart} ${scriptaddr} ${prefi
 scriptaddr=0x00c00000
 ```
 
-### scan_dev_for_extlinux
+## scan_dev_for_extlinux
 
 查看`scan_dev_for_extlinux`:
 
@@ -162,7 +162,7 @@ scriptaddr=0x00c00000
 
 这里就是判断`${devtype} ${devnum}:${distro_bootpart} ${prefix}extlinux/extlinux.conf`文件是否存在，如果存在的话，就去运行`boot_extlinux`。
 
-### boot_extlinux
+## boot_extlinux
 
 查看`boot_extlinux`:
 
