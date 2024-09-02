@@ -1,6 +1,6 @@
 title: OpenHarmony on rk3568驱动intel 7260无线网卡
 date: '2024-08-21 14:14:14'
-updated: '2024-08-21 14:14:18'
+updated: '2024-09-02 16:03:38'
 tags:
   - openHarmony
   - kernel
@@ -131,7 +131,7 @@ mkdir -p device/board/hihope/rk3568/kernel/firmware/ && cp <firmware_path> devic
 [    2.969690] ieee80211 phy0: Selected rate control algorithm 'iwl-mvm-rs'
 ```
 
-使用ifconfig能够查看到，但是操作失败：
+使用`ifconfig`能够查看到，但是操作失败：
 
 ```bash
 # ifconfig wlan0
@@ -165,19 +165,118 @@ ifconfig: ioctl 8914: No error information
         Hard blocked: yes
 ```
 
-查看有关`rfkill`的内核日志：
+根据原理图和设备树，我们锁定两个引脚，一个是`reset`一个是`disable`:
+
+```c
+/* mini pcie */
+&pcie2x1 {
+	reset-gpios = <&gpio3 RK_PC1 GPIO_ACTIVE_HIGH>;
+	disable-gpios = <&gpio3 RK_PC2 GPIO_ACTIVE_HIGH>;
+	vpcie3v3-supply = <&mini_pcie_3v3>;
+	status = "okay";
+};
+```
+
+[2024-09-02-15-56-00.png](https://postimg.cc/DmdVQbFt)
+
+经过万用表测量`reset`引脚在进入`shell`后是高电平，而`disable`引脚则从上电到进入`shell`一直都是低电平。
+
+那么应该可以确定问题所在了，就是`disable`搞得鬼。
+
+查看文档`Documentation/devicetree/bindings/pci/rockchip-pcie-host.txt`中并没有关于`disable`的说明，这让我大感奇怪：
 
 ```bash
-# dmesg | grep rfkill
-[    1.441841] [BT_RFKILL]: Enter rfkill_rk_init
-[    1.441854] [WLAN_RFKILL]: Enter rfkill_wlan_init
-[    1.497371] [WLAN_RFKILL]: rockchip_wifi_get_oob_irq: rfkill-wlan driver has not Successful initialized
-[    1.497449] [WLAN_RFKILL]: rockchip_wifi_power: rfkill-wlan driver has not Successful initialized
-[    3.909280] [WLAN_RFKILL]: rockchip_wifi_power: rfkill-wlan driver has not Successful initialized
+❯ cat Documentation/devicetree/bindings/pci/rockchip-pcie-host.txt | grep disable
 ```
+
+因为这个设备树的基准文件来自于野火`sdk`的`4.19`版本，所以这时候还在怀疑是不是`5.10`内核的驱动中取消了这一个节点属性换成其他名字的了，于是又去`4.19`的文档看了一下，也是没有`disable`的说明，此时心中已经警惕了，感觉就是野火改了驱动。
+
+查找该驱动的c文件：
+
+```bash
+❯ find -name "*.c" -exec grep -n "rockchip,rk3568-pcie" {} +
+./drivers/phy/rockchip/phy-rockchip-snps-pcie3.c:262:	{ .compatible = "rockchip,rk3568-pcie3-phy", .data = &rk3568_ops },
+./drivers/pci/controller/dwc/pcie-dw-rockchip.c:1324:		.compatible = "rockchip,rk3568-pcie",
+./drivers/pci/controller/dwc/pcie-dw-rockchip.c:1328:		.compatible = "rockchip,rk3568-pcie-ep",
+```
+
+锁定`/drivers/pci/controller/dwc/pcie-dw-rockchip.c`文件，进去一看，果然...:
+
+```c
+static int rk_pcie_resource_get(struct platform_device *pdev,
+					 struct rk_pcie *rk_pcie)
+{
+	...
+	rk_pcie->dis_gpio = devm_gpiod_get_optional(&pdev->dev, "disable",
+						    GPIOD_OUT_LOW);
+	if (IS_ERR(rk_pcie->dis_gpio)) {
+		dev_err(&pdev->dev, "invalid disable-gpios property in node\n");
+		return PTR_ERR(rk_pcie->rst_gpio);
+	}
+	...
+}
+```
+
+上述代码块中的内容是野火增加的`disable`引脚资源获取，在官方的驱动里面是并没有这一部分的，所以增加如下内容：
+
+```c
+diff --git a/drivers/pci/controller/dwc/pcie-dw-rockchip.c b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+index fa40f51..3c6cd4f 100755
+--- a/drivers/pci/controller/dwc/pcie-dw-rockchip.c
++++ b/drivers/pci/controller/dwc/pcie-dw-rockchip.c
+@@ -133,6 +133,7 @@ struct rk_pcie {
+ 	unsigned int			clk_cnt;
+ 	struct reset_bulk_data		*rsts;
+ 	struct gpio_desc		*rst_gpio;
++	struct gpio_desc		*dis_gpio;
+ 	phys_addr_t			mem_start;
+ 	size_t				mem_size;
+ 	struct pcie_port		pp;
+@@ -892,6 +893,11 @@ static int rk_pcie_host_init(struct pcie_port *pp)
+ {
+ 	int ret;
+ 	struct dw_pcie *pci = to_dw_pcie_from_pp(pp);
++	struct rk_pcie *rk_pcie = to_rk_pcie(pci);
++        
++	if (!IS_ERR(rk_pcie->dis_gpio)) {
++		gpiod_set_value_cansleep(rk_pcie->dis_gpio, 1);
++        }
+ 
+ 	dw_pcie_setup_rc(pp);
+ 
+@@ -1066,6 +1072,13 @@ static int rk_pcie_resource_get(struct platform_device *pdev,
+ 		dev_err(&pdev->dev, "invalid reset-gpios property in node\n");
+ 		return PTR_ERR(rk_pcie->rst_gpio);
+ 	}
++	
++	rk_pcie->dis_gpio = devm_gpiod_get_optional(&pdev->dev, "disable",
++						    GPIOD_OUT_LOW);
++	if (IS_ERR(rk_pcie->dis_gpio)) {
++		dev_err(&pdev->dev, "invalid disable-gpios property in node\n");
++		return PTR_ERR(rk_pcie->rst_gpio);
++	}
+ 
+ 	return 0;
+ }
+-- 
+2.34.1
+```
+
+重新编译烧录内核，一切正常：
+
+```bash
+# rfkill list                                                                  
+0: hci0: bluetooth
+        Soft blocked: no
+        Hard blocked: no
+1: phy0: wlan
+        Soft blocked: no
+        Hard blocked: no
+```
+
 
 ## Ref
 
 https://wireless.wiki.kernel.org/en/users/Drivers/iwlwifi
 https://www.kernel.org/doc/html/v4.14/driver-api/firmware/built-in-fw.html
-https://wiki.gentoo.org/wiki/Linux_firmware
+https://wiki.gentoo.org/wiki/
