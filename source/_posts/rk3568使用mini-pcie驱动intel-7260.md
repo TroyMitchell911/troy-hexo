@@ -177,7 +177,7 @@ ifconfig: ioctl 8914: No error information
 };
 ```
 
-[2024-09-02-15-56-00.png](https://postimg.cc/DmdVQbFt)
+![2024-09-02-15-56-00.png](https://i.postimg.cc/Y2TpH1Pq/2024-09-02-15-56-00.png)
 
 经过万用表测量`reset`引脚在进入`shell`后是高电平，而`disable`引脚则从上电到进入`shell`一直都是低电平。
 
