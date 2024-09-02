@@ -200,7 +200,7 @@ ifconfig: ioctl 8914: No error information
 ./drivers/pci/controller/dwc/pcie-dw-rockchip.c:1328:		.compatible = "rockchip,rk3568-pcie-ep",
 ```
 
-锁定`/drivers/pci/controller/dwc/pcie-dw-rockchip.c`文件，进去一看，果然...:
+锁定`./drivers/pci/controller/dwc/pcie-dw-rockchip.c`文件，进去一看，果然...:
 
 ```c
 static int rk_pcie_resource_get(struct platform_device *pdev,
