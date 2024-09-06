@@ -10,13 +10,13 @@ categories:
 
 Board: BPI-F3 based on k1 of SpaceMit
 
-** Note: 本文默认已经在主机待建成功tftp服务 **
+**Note: 本文默认已经在主机待建成功tftp服务**
 
 ## Content
 
 ### 设置IP
 
-在主机上查询ip:
+在主机上查询`ip`:
 
 ```bash
 ❯ ifconfig
@@ -30,9 +30,9 @@ enx00e099a751b1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ```
 
-得到主机ip是192.168.230.28，板子ip确保在一个局域网内就好。
+得到主机`ip`是`192.168.230.28`，板子`ip`确保在一个局域网内就好。
 
-接下来进入uboot设置ip：
+接下来进入`uboot`设置`ip`：
 
 ```bash
 => setenv ipaddr 192.168.230.4
@@ -46,7 +46,7 @@ serverip=192.168.230.28
 
 ### 配置pxe文件
 
-在主机上进入tftp文件夹，目录结构如下：
+在主机上进入`tftp`文件夹，目录结构如下：
 
 ```bash
 ❯ tree
@@ -60,20 +60,20 @@ serverip=192.168.230.28
 ```
 
 
-其中pxelinux.cfg是存放pxe配置文件的文件夹，由于TFTP服务可能会被多个开发板使用，因此“ PXE配置文件”的名称取决于U-boot参数(板的硬件地址/ IP地址)。
+其中`pxelinux.cfg`是存放`pxe配置文件`的文件夹，由于`TFTP`服务可能会被多个开发板使用，因此`PXE配置文件`的名称取决于`U-boot`参数(板的硬件地址/ IP地址)。
 
-优先级最高的是mac地址，在uboot中查看mac地址：
+优先级最高的是`mac`地址，在`uboot`中查看`mac`地址：
 
 ```bash
 => [ 898.685] printenv ethaddr 
 ethaddr=FE:FE:FE:81:B4:A8
 ```
 
-所以cfg的名字就应该是:  01-fe-fe-fe-81-b4-a8
+所以`cfg`的名字就应该是:  `01-fe-fe-fe-81-b4-a8`
 
-这个01我也不知道什么意思，反正必须加上。
+这个`01`我也不知道什么意思，反正必须加上。
 
-接下来就是修改 01-fe-fe-fe-81-b4-a8这个文件了，文件内容格式跟[extlinux](https://blog.505218.xyz/2024/08/26/%E9%87%8E%E7%81%ABuboot%E4%BD%BF%E7%94%A8extboot%E5%90%AF%E5%8A%A8%E5%86%85%E6%A0%B8%E6%B5%81%E7%A8%8B/#cfg%E6%96%87%E4%BB%B6)是一模一样的，这里不再赘述。
+接下来就是修改 `01-fe-fe-fe-81-b4-a8`这个文件了，文件内容格式跟[extlinux](https://blog.505218.xyz/2024/08/26/%E9%87%8E%E7%81%ABuboot%E4%BD%BF%E7%94%A8extboot%E5%90%AF%E5%8A%A8%E5%86%85%E6%A0%B8%E6%B5%81%E7%A8%8B/#cfg%E6%96%87%E4%BB%B6)是一模一样的，这里不再赘述。
 
 文件内容如下：
 
@@ -89,14 +89,14 @@ label linux
 
 ## pxe启动
 
-在uboot中执行如下命令：
+在`uboot`中执行如下命令：
 
 ```bash
 pxe get
 pxe boot
 ```
 
-经过以上命令按道理来说就可以启动内核了，但是发现启动到一半卡死了，看log发现貌似是设备树没有加载，他使用了一个地址`0x7deb2e10`的设备树：
+经过以上命令按道理来说就可以启动内核了，但是发现启动到一半卡死了，看`log`发现貌似是设备树没有加载，他使用了一个地址`0x7deb2e10`的设备树：
 
 ```
 => [1976.087] pxe get
@@ -169,16 +169,16 @@ re_unused swiotlb=65536 rdinit=/init workqueue.default_affinity_scope=system roo
 [2011.495]    Booting using the fdt blob at 0x7deb2e10
 [2011.500]    Loading Device Tree to 000000007dd8f000, end 000000007dd9cf27 ... OK
 ```
-这就很奇怪了，但运气使然，在uboot中发现了这么一个变量：
+这就很奇怪了，但运气使然，在`uboot`中发现了这么一个变量：
 
 ```bash
 =>  printenv fdtcontroladdr 
 fdtcontroladdr=7deb2e10
 ```
 
-这和刚才在内存中加载的设备树的地址一模一样，但尝试将他晴空再执行pxe，一样，看来有点运气，但不多。
+这和刚才在内存中加载的设备树的地址一模一样，但尝试将他清空再执行`pxe`，same thing，看来有点运气，但不多。
 
-经过查询资料发现，pxe会将conf指定的Image加载到kernel_addr_r处，将dtb加载到fdt_addr_r处，那么是否我们的uboot默认只设置了kernel的地址而没有dtb的地址，在uboot中输入以下指令：
+经过查询资料发现，`pxe`会将`conf`指定的`Image`加载到`kernel_addr_r`处，将`dtb`加载到`fdt_addr_r`处，那么是否我们的`uboot`默认只设置了`kernel`的地址而没有`dtb`的地址，在`uboot`中输入以下指令：
 
 ```bash
 => [  58.262] printenv kernel_addr_r 
@@ -196,4 +196,8 @@ dtb_addr=0x31000000
 => saveenv
 Saving Environment to MMC... Writing to MMC(2)... OK
 ```
-此时再通过pxe启动就没有任何问题了。
+此时再通过`pxe`启动就没有任何问题了。
+
+## Ref
+
+https://blog.csdn.net/weixin_35808698/article/details/117274748
