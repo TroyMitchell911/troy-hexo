@@ -38,3 +38,15 @@ Traceback (most recent call last):
 ModuleNotFoundError: No module named 'pylibfdt'
 
 ```
+
+```bash
+=> mmc dev 0
+Card did not respond to voltage select!
+=> mmc dev 1
+Card did not respond to voltage select!
+=> mmc dev 0
+MMC: no card present
+=> mmc dev 1
+Card did not respond to voltage select!
+
+```
