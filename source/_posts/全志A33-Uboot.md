@@ -68,7 +68,14 @@ pylibfdt                           1.7.0.post1
 
 在[这里](https://blog.csdn.net/qq_34752070/article/details/125182978)找到了问题的解决方案，重新链接后解决问题。
 
-通过fel进入将uboot启动之后发现emmc和sd卡都无法使用...
+连接开发板串口0之后通过进入fel启动uboot：
+
+```bash
+❯ git clone git@github.com:u-boot/u-boot.git
+❯ sudo sunxi-fel uboot ./u-boot-sunxi-with-spl.bin
+```
+
+之后发现emmc和sd卡都无法使用...
 
 ```bash
 => mmc dev 0
@@ -81,6 +88,90 @@ MMC: no card present
 Card did not respond to voltage select!
 ```
 
-fuck you allwinner! mainline start!
+**fuck you allwinner! mainline start!**
 
 ## mainline
+
+拉取uboot主线代码：
+
+```bash
+❯ git clone git@github.com:u-boot/u-boot.git 
+❯ cd u-boot
+```
+
+依旧使用之前的Sinlinx的配置：
+
+```bash
+❯ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- Sinlinx_SinA33_defconfig
+❯ make ARCH=arm CROSS_COMPILE=arm-linux-gnueabihf- -j16
+```
+
+这次发现日志到MMC就结束了：
+
+```bash
+U-Boot 2024.10-rc4-g5f0449324136-dirty (Sep 14 2024 - 15:47:46 +0800) Allwinner Technology
+
+CPU:   Allwinner A33 (SUN8I 1667)
+Model: Sinlinx SinA33
+DRAM:  512 MiB
+Core:  64 devices, 21 uclasses, devicetree: separate
+WDT:   Not starting watchdog@1c20ca0
+MMC: 
+```
+
+这里一开始一直怀疑uboot卡死了，排查一段时间后发现其实并不是。
+
+可以观察到`Model: Sinlinx SinA33`这一行，按找这个查找对应设备树：
+
+```bash
+❯ find -name "*.dts*" -exec grep -n "Sinlinx SinA33" {} +
+./arch/arm/dts/sun8i-a33-sinlinx-sina33.dts:53:	model = "Sinlinx SinA33";
+./dts/upstream/src/arm/allwinner/sun8i-a33-sinlinx-sina33.dts:53:	model = "Sinlinx SinA33";
+```
+
+查到两个dts，查询dtb:
+
+```bash
+❯ ls ./arch/arm/dts/sun8i-a33-sinlinx-sina33.dtb
+./arch/arm/dts/sun8i-a33-sinlinx-sina33.dtb
+❯ ls ./dts/upstream/src/arm/allwinner/sun8i-a33-sinlinx-sina33.dtb
+ls: 无法访问 './dts/upstream/src/arm/allwinner/sun8i-a33-sinlinx-sina33.dtb': 没有那个文件或目录
+```
+
+可以确定就是`./arch/arm/dts/sun8i-a33-sinlinx-sina33.dtb`这个文件，查询其对应的dts可以发现指定的就是uart0：
+
+```bash
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+```
+
+查看uart0节点及其对应的gpio：
+
+```bash
+// ./arch/arm/dts/sun8i-a33-sinlinx-sina33.dts
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_pb_pins>;
+	status = "okay";
+};
+
+//./arch/arm/dts/sun8i-a33.dtsi
+&pio {
+	compatible = "allwinner,sun8i-a33-pinctrl";
+	interrupts = <GIC_SPI 15 IRQ_TYPE_LEVEL_HIGH>,
+		     <GIC_SPI 17 IRQ_TYPE_LEVEL_HIGH>;
+
+	uart0_pb_pins: uart0-pb-pins {
+		pins = "PB0", "PB1";
+		function = "uart0";
+	};
+};
+```
+
+这里指定了uart0的引脚使用PB0作tx，PB1作rx，查看原理图这两个引脚原来在是uart2,将uart2的引脚复用成uart0了
+
