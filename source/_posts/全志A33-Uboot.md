@@ -32,7 +32,7 @@ host: ubuntu 22.04
 
 编译遇到如下错误，看起来很熟悉，好像当年搞f1c200s的时候也遇见了这个错误...
 
-给lichee pi的仓库提交了pr，但已经过去了一年多，也没有离我...
+给lichee pi的仓库提交了pr，但已经过去了一年多，也没有理我...
 
 该错误可通过该pr修复：[我是PR](https://github.com/Lichee-Pi/u-boot/pull/7)
 
@@ -44,8 +44,9 @@ usr/bin/ld: scripts/dtc/dtc-parser.tab.o:(.bss+0x10): multiple definition of `yy
 collect2: error: ld returned 1 exit status
 make[2]: *** [scripts/Makefile.host:106：scripts/dtc/dtc] 错误 1
 make[2]: *** 正在等待未完成的任务....
-
 ```
+
+继续编译，到了最后阶段却遇到了如下错误：
 
 ```bash
   MKSUNXI spl/sunxi-spl.bin
@@ -54,20 +55,20 @@ binman: No module named _libfdt
 make: *** [Makefile:1348：u-boot-sunxi-with-spl.bin] 错误 1
 ```
 
+检查python是否有这个module:
+
 ```bash
 ❯ python -m pip list | grep pylibfdt
 pylibfdt                           1.7.0.post1
-
 ```
 
-```bash
-❯ python -c "import pylibfdt; print(pylibfdt.__file__)"
+这时候已经开始怀疑是这个module的版本问题了，在[这里](https://pypi.org/project/pylibfdt/#history)找到了历史版本信息，逐个尝试安装还是不行...
 
-Traceback (most recent call last):
-  File "<string>", line 1, in <module>
-ModuleNotFoundError: No module named 'pylibfdt'
+最终在[这里](https://lore.kernel.org/buildroot/bug-11706-163@https.bugs.busybox.net%2F/T/)找到了问题的原因，是python版本的问题。
 
-```
+在[这里](https://blog.csdn.net/qq_34752070/article/details/125182978)找到了问题的解决方案，重新链接后解决问题。
+
+通过fel进入将uboot启动之后发现emmc和sd卡都无法使用...
 
 ```bash
 => mmc dev 0
@@ -78,5 +79,8 @@ Card did not respond to voltage select!
 MMC: no card present
 => mmc dev 1
 Card did not respond to voltage select!
-
 ```
+
+fuck you allwinner! mainline start!
+
+## mainline
