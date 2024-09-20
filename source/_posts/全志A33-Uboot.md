@@ -12,6 +12,12 @@ cpu: allwinner a33
 board: vstar
 host: ubuntu 22.04
 
+需要安装交叉编译工具链：
+
+```bash
+❯ sudo apt install gcc-arm-none-eabi
+```
+
 ## FEL模式
 
 通过FEL模式可以启动uboot或将内核镜像等文件下载到内存，是个很方便的功能。
