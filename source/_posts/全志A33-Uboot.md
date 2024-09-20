@@ -1,6 +1,6 @@
-title: '[全志A33]Uboot'
+title: '[全志A33-Vstar]Uboot'
 date: '2024-09-13 10:58:32'
-updated: '2024-09-14 17:27:43'
+updated: '2024-09-20 22:39:38'
 tags:
   - uboot
 categories:
@@ -410,6 +410,25 @@ Not retrying...
 => setenv autoload no
 ```
 
+由于是fel模式，烧写进入的是ram，掉电会丢失，所以saveenv保存不了参数，那么直接把autoload环境变量做到uboot源码里面也是可以的。
+
+只需要修改`include/configs/sunxi-common.h`文件即可：
+
+```bash
+diff --git a/include/configs/sunxi-common.h b/include/configs/sunxi-common.h
+index b29a25d5617..fefc2e291eb 100644
+--- a/include/configs/sunxi-common.h
++++ b/include/configs/sunxi-common.h
+@@ -297,6 +297,7 @@
+        "uuid_gpt_system=" UUID_GPT_SYSTEM "\0" \
+        "partitions=" PARTS_DEFAULT "\0" \
+        BOOTCMD_SUNXI_COMPAT \
+-       BOOTENV
++       BOOTENV \
++       "autoload=no"
+ 
+ #endif /* _SUNXI_COMMON_CONFIG_H */
+```
 
 
 
