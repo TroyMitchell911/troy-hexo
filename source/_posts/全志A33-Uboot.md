@@ -9,8 +9,29 @@ categories:
 ## Env
 
 cpu: allwinner a33
-board: vstart
+board: vstar
 host: ubuntu 22.04
+
+## FEL模式
+
+通过FEL模式可以启动uboot或将内核镜像等文件下载到内存，是个很方便的功能。
+
+若要使用fel系列的工具，需要先安装：
+
+```bash
+❯ sudo apt-get install sunxi-tools
+```
+
+vstar开发板进入fel的方式有两种：
+
+- 按住power键不松手，随后按reset，等待1s后放开power键
+- 按住vol + 键不松手，随后按reset，连续短按5-10次power键后有一个灯闪烁一下，此时松开vol+键即可进入。
+
+fel烧写uboot命令：
+
+```bash
+❯ sudo sunxi-fel uboot ./u-boot-sunxi-with-spl.bin
+```
 
 ## uboot-sunxi仓库试错
 
