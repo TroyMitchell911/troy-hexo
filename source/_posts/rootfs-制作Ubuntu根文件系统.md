@@ -1,6 +1,6 @@
 title: '[rootfs]制作Ubuntu根文件系统'
 date: '2024-09-20 23:46:54'
-updated: '2024-09-20 23:46:56'
+updated: '2024-09-20 23:56:53'
 tags:
   - ubuntu
 categories:
@@ -124,7 +124,7 @@ usermod -aG sudo ubuntu
 
 ```
 apt update
-apt install sudo nano ssh
+apt install sudo nano ssh net-tools network-manager usbutils
 ```
 
 **8. Exit the Chroot**
