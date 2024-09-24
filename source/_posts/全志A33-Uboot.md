@@ -15,7 +15,7 @@ host: ubuntu 22.04
 需要安装交叉编译工具链：
 
 ```bash
-❯ sudo apt install gcc-arm-none-eabi
+❯ sudo apt install gcc-arm-linux-gnueabihf
 ```
 
 ## FEL模式
