@@ -1,4 +1,4 @@
-title: Google cloud consle免费shell玩法
+title: Google cloud console免费shell玩法
 date: '2024-10-31 23:08:01'
 updated: '2024-10-31 23:08:02'
 tags:
@@ -8,7 +8,7 @@ categories:
 ---
 ## Prep
 
-Google cloud consle我并不清楚是个什么东西，由[percycle](https://github.com/per1cycle)提供给我。直到现在，我只知道我能通过它创建12个shell配额。
+Google cloud console我并不清楚是个什么东西，由[percycle](https://github.com/per1cycle)提供给我。直到现在，我只知道我能通过它创建12个shell配额。
 
 此`shell`运行在`docker`中，并没有提供`公网IP`，这意味着可玩性大大降低，不能当作`server`使用。
 
