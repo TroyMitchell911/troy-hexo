@@ -10,3 +10,4 @@ https://github.com/nextcloud/all-in-one#how-to-change-the-default-location-of-ne
 https://github.com/nextcloud/all-in-one/blob/main/reverse-proxy.md
 https://help.nextcloud.com/t/using-nextcloud-aio-via-cloudflare-argo-tunnel/141376/4
 https://github.com/nextcloud/all-in-one/discussions/2845
+https://github.com/nextcloud/all-in-one#how-to-run-nextcloud-behind-a-cloudflare-tunnel
