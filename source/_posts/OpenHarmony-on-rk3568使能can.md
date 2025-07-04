@@ -28,7 +28,7 @@ chip: rk3568
 
 去rockchip的kernel仓库找到关于can的部分：https://github.com/rockchip-linux/kernel/blob/develop-5.10/drivers/net/can/rockchip/
 
-进入到我们的内核工作目录，没有Makefile创建的可以见这篇文章：https://blog.505218.xyz/2024/08/16/rk3568%E7%A7%BB%E6%A4%8DopenHarmony-v3-2-3-%E7%B3%BB%E7%BB%9F%E7%A7%BB%E6%A4%8D/
+进入到我们的内核工作目录，没有Makefile创建的可以见这篇文章：https://blog.troy-y.org/2024/08/16/rk3568%E7%A7%BB%E6%A4%8DopenHarmony-v3-2-3-%E7%B3%BB%E7%BB%9F%E7%A7%BB%E6%A4%8D/
 
 将刚才仓库的文件无论用什么方式放到`driver/net/can/rockchip`目录下，随后进行`git`操作:
 
@@ -104,5 +104,5 @@ chip: rk3568
 
 ## Ref
 
-https://blog.505218.xyz/2024/08/16/rk3568%E7%A7%BB%E6%A4%8DopenHarmony-v3-2-3-%E7%B3%BB%E7%BB%9F%E7%A7%BB%E6%A4%8D/
+https://blog.troy-y.org/2024/08/16/rk3568%E7%A7%BB%E6%A4%8DopenHarmony-v3-2-3-%E7%B3%BB%E7%BB%9F%E7%A7%BB%E6%A4%8D/
 https://github.com/rockchip-linux/kernel/blob/develop-5.10/drivers/net/can/rockchip/

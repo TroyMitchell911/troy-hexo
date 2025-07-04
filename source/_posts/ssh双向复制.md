@@ -61,5 +61,5 @@ $ xclock
 
 在服务器配合这两个文档基本可以横着走：
 
-[tmux复制到剪切板](https://blog.505218.xyz/2024/11/30/tmux%E5%A4%8D%E5%88%B6%E5%88%B0%E7%B3%BB%E7%BB%9F%E5%89%AA%E5%88%87%E6%9D%BF/)
-[lazyvim复制到剪切板](https://blog.505218.xyz/2024/11/30/lazyvim%E5%A4%8D%E5%88%B6%E5%88%B0%E5%89%AA%E5%88%87%E6%9D%BF/)
+[tmux复制到剪切板](https://blog.troy-y.org/2024/11/30/tmux%E5%A4%8D%E5%88%B6%E5%88%B0%E7%B3%BB%E7%BB%9F%E5%89%AA%E5%88%87%E6%9D%BF/)
+[lazyvim复制到剪切板](https://blog.troy-y.org/2024/11/30/lazyvim%E5%A4%8D%E5%88%B6%E5%88%B0%E5%89%AA%E5%88%87%E6%9D%BF/)

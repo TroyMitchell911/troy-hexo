@@ -73,7 +73,7 @@ ethaddr=FE:FE:FE:81:B4:A8
 
 这个`01`我也不知道什么意思，反正必须加上。
 
-接下来就是修改 `01-fe-fe-fe-81-b4-a8`这个文件了，文件内容格式跟[extlinux](https://blog.505218.xyz/2024/08/26/%E9%87%8E%E7%81%ABuboot%E4%BD%BF%E7%94%A8extboot%E5%90%AF%E5%8A%A8%E5%86%85%E6%A0%B8%E6%B5%81%E7%A8%8B/#cfg%E6%96%87%E4%BB%B6)是一模一样的，这里不再赘述。
+接下来就是修改 `01-fe-fe-fe-81-b4-a8`这个文件了，文件内容格式跟[extlinux](https://blog.troy-y.org/2024/08/26/%E9%87%8E%E7%81%ABuboot%E4%BD%BF%E7%94%A8extboot%E5%90%AF%E5%8A%A8%E5%86%85%E6%A0%B8%E6%B5%81%E7%A8%8B/#cfg%E6%96%87%E4%BB%B6)是一模一样的，这里不再赘述。
 
 文件内容如下：
 

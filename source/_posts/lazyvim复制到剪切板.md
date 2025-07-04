@@ -14,7 +14,7 @@ opt.clipboard = vim.env.SSH_TTY and "" or "unnamedplus" -- Sync with system clip
 
 这句的意思查看你的shell是否是tty类型，如果是tty那么就不会进入系统剪切板。恰好ssh就是tty类型，所以ssh连接的shell在打开nvim复制的内容是不会进入到系统剪切板的。
 
-进入系统剪切板的作用：[here](https://blog.505218.xyz/2024/11/30/ssh%E5%8F%8C%E5%90%91%E5%A4%8D%E5%88%B6/)
+进入系统剪切板的作用：[here](https://blog.troy-y.org/2024/11/30/ssh%E5%8F%8C%E5%90%91%E5%A4%8D%E5%88%B6/)
 
 所以要在`~/.config/nvim/lua/config/option.lua`中覆盖这条默认设置：
 

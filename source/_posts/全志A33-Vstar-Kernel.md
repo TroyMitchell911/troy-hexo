@@ -6,7 +6,7 @@ tags:
   - kernel
   - allwinner
 ---
-**本文章基于该uboot启动**：[传送门](https://blog.505218.xyz/2024/09/13/%E5%85%A8%E5%BF%97A33-Uboot/)
+**本文章基于该uboot启动**：[传送门](https://blog.troy-y.org/2024/09/13/%E5%85%A8%E5%BF%97A33-Uboot/)
 
 ## Env
 
@@ -72,7 +72,7 @@ arch/arm/boot/zImage
 arch/arm/boot/dts/allwinner/sun8i-a33-vstar.dtb
 ```
 
-使用[这篇文章](https://blog.505218.xyz/2024/09/20/sd%E4%B8%8Emmc%E5%88%B7%E5%86%99%E6%8C%87%E5%8D%97/)的技巧将kernel和dtb装入sd卡boot分区，装入emmc的boot分区也是可以的。
+使用[这篇文章](https://blog.troy-y.org/2024/09/20/sd%E4%B8%8Emmc%E5%88%B7%E5%86%99%E6%8C%87%E5%8D%97/)的技巧将kernel和dtb装入sd卡boot分区，装入emmc的boot分区也是可以的。
 
 **PS：其实这里使用tftp更加合理，但在家中没有网口环境，所以只能退而求其次这样调试了。**
 
@@ -557,9 +557,9 @@ index f89a005227d9..95a7c7f394b8 100644
 [    1.323511]  mmcblk0: p1 p2
 ```
 
-接下来就是紧急制作一个文件系统：[传送门](https://blog.505218.xyz/2024/09/20/rootfs-%E5%88%B6%E4%BD%9CUbuntu%E6%A0%B9%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/)
+接下来就是紧急制作一个文件系统：[传送门](https://blog.troy-y.org/2024/09/20/rootfs-%E5%88%B6%E4%BD%9CUbuntu%E6%A0%B9%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F/)
 
-制作好根文件系统之后将根文件系统的内容放入rootfs分区，不知道怎么放可以参考这里：[传送门](https://blog.505218.xyz/2024/09/20/sd%E4%B8%8Emmc%E5%88%B7%E5%86%99%E6%8C%87%E5%8D%97/)
+制作好根文件系统之后将根文件系统的内容放入rootfs分区，不知道怎么放可以参考这里：[传送门](https://blog.troy-y.org/2024/09/20/sd%E4%B8%8Emmc%E5%88%B7%E5%86%99%E6%8C%87%E5%8D%97/)
 
 重新启动就已经可以进入根文件系统了：
 

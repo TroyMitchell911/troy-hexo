@@ -12,7 +12,7 @@ Systemt: Ubuntu 22.04
 
 ```bash
 ❯ git clone --depth=1  https://github.com/Caesar-github/u-boot
-# 这是rkbin仓库，至于为什么克隆见https://blog.505218.xyz/2024/08/23/rk3568%E7%A7%BB%E6%A4%8Duboot/
+# 这是rkbin仓库，至于为什么克隆见https://blog.troy-y.org/2024/08/23/rk3568%E7%A7%BB%E6%A4%8Duboot/
 ❯ git clone --depth=1 git@github.com:Caesar-github/rkbin.git
 ```
 
@@ -30,7 +30,7 @@ rk356x_spl_loader_v1.13.112.bin
 uboot.img
 ```
 
-其中`rk356x_spl_loader_v1.13.112.bin`是由rkbin仓库的`ddr init.bin`和`miniloader`合并成的，了解原理并手动合成可以看https://blog.505218.xyz/2024/08/23/rk3568%E7%A7%BB%E6%A4%8Duboot/
+其中`rk356x_spl_loader_v1.13.112.bin`是由rkbin仓库的`ddr init.bin`和`miniloader`合并成的，了解原理并手动合成可以看https://blog.troy-y.org/2024/08/23/rk3568%E7%A7%BB%E6%A4%8Duboot/
 
 `uboot.img`则是由`fit/u-boot.itb`拷贝来的，`fit/u-boot.itb`是一个`FIT`格式的镜像文件，由`fit/u-boot.its`指导生成，观察`fit/u-boot.its`文件如下：
 

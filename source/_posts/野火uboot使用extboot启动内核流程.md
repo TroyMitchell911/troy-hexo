@@ -22,7 +22,7 @@ bootcmd=run distro_bootcmd;boot_android ${devtype} ${devnum};boot_fit;bootrkp;
 distro_bootcmd=for target in ${boot_targets}; do run bootcmd_${target}; done
 ```
 
-关于`distro_bootcmd`更详细的内容可以查看：https://blog.505218.xyz/2024/08/23/Rockchip-%E7%B3%BB%E5%88%97%E8%8A%AF%E7%89%87uboot-distro-cmd/
+关于`distro_bootcmd`更详细的内容可以查看：https://blog.troy-y.org/2024/08/23/Rockchip-%E7%B3%BB%E5%88%97%E8%8A%AF%E7%89%87uboot-distro-cmd/
 
 这里直接进入到`bootcmd_mmc0`，也就是从`emmc`启动，`sd`卡大同小异:
 
