@@ -51,8 +51,6 @@ disable_top_img: false
 # The banner image of home page
 index_img: /img/top_img.jpg
 
-
-
 # If the banner of page not setting, it will show the top_img
 default_top_img: /img/top_img.jpg
 
@@ -320,7 +318,7 @@ darkmode:
   # autoChangeMode: 1  Following System Settings, if the system doesn't support dark mode, it will switch dark mode between 6 pm to 6 am
   # autoChangeMode: 2  Switch dark mode between 6 pm to 6 am
   # autoChangeMode: false
-  autoChangeMode: false
+  autoChangeMode: 1
   # Set the light mode time. The value is between 0 and 24. If not set, the default value is 6 and 18
   start: # 8
   end: # 22
