@@ -698,11 +698,236 @@ static mca_btl_base_descriptor_t *mca_btl_self_alloc(struct mca_btl_base_module_
 
 ### btl_prepare_src - 发送准备
 
-在btl_send函数之前执行，准备源数据。
+prepare_src 可以根据数据特性选择最优的处理方式。比如对于连续数据可以避免不必要的内存拷贝。
+
+这点我们会在下面的代码看到：
+
+```
+/**
+ * Prepare data for send
+ *
+ * @param btl (IN)      BTL module
+ */
+static struct mca_btl_base_descriptor_t *mca_btl_self_prepare_src(
+    struct mca_btl_base_module_t *btl, struct mca_btl_base_endpoint_t *endpoint,
+    struct opal_convertor_t *convertor, uint8_t order, size_t reserve, size_t *size, uint32_t flags)
+{
+    bool inline_send = !(opal_convertor_need_buffers(convertor) || opal_convertor_on_device(convertor));
+    size_t buffer_len = reserve + (inline_send ? 0 : *size);
+    mca_btl_self_frag_t *frag;
+
+    frag = (mca_btl_self_frag_t *) mca_btl_self_alloc(btl, endpoint, order, buffer_len, flags);
+    if (OPAL_UNLIKELY(NULL == frag)) {
+        return NULL;
+    }
+
+    ...
+
+}
+```
+
+
+首先先获取是否需要内联发送，内联发送的条件是:
+
+- opal_convertor_need_buffers = 0, 也就是说数据是连续的，不需要额外缓冲区进行打包
+- opal_convertor_on_device = 0, 数据没有在设备上，比如GPU
+
+这里又引入了一个新的数据结构convertor, 它其实就是数据buffer的一个封装，主要作用：
+
+- 处理非连续数据类型：将复杂的 MPI 数据类型（如结构体、向量等）转换为可传输的连续字节流
+- 数据打包/解包：通过 opal_convertor_pack 和 opal_convertor_unpack 函数进行数据转换
+- 跨架构支持：处理不同架构间的数据格式转换
+
+在buffer_len中比较迷惑的一点就是reserve, 预留内存大小。是上层协议（如 PML）需要在数据前面预留的头部空间，用于存放协议头信息
+
+接下来申请一个frag，之后就会遇到两个路径。
+
+这里需要先提前说一下segments的规范：
+
+- 当为连续数据的时候， segments[0]为PML层的头部数据保留， segments[1]指向实际数据的指针（零拷贝）
+- 当为非连续数据的时候， segments[0]为PML层的头部数据+实际数据， segments[1] 没有作用。
+
+#### 连续数据内联准备发送
+
+```
+    } else {
+        void *data_ptr;
+
+        opal_convertor_get_current_pointer(convertor, &data_ptr);
+
+        frag->segments[1].seg_addr.pval = data_ptr;
+        frag->segments[1].seg_len = *size;
+        frag->base.des_segment_count = 2;
+    }
+    
+    return &frag->base;
+```
+
+当inline_send = true的时候，就走的else也就是内联发送分支。
+
+从UNLIKELY这个宏可以看出，绝大部分时间应该走的是这个分支。
+
+在内联发送中，将convertor的当前指针拿到data_prt变量中，然后赋值给segments[1]。
+
+最后直接返回了frag的父对象也就是base描述符的指针。
+
+这样接收方可以直接从convertor指向的指针中直接拿数据，0拷贝。
+
+#### 非连续数据或非本地数据（在设备上）准备发送
+
+```
+    /* non-contiguous data */
+    if (OPAL_UNLIKELY(!inline_send)) {
+        struct iovec iov = {.iov_len = *size,
+                            .iov_base = (IOVBASE_TYPE *) ((uintptr_t) frag->data + reserve)};
+        size_t max_data = *size;
+        uint32_t iov_count = 1;
+        int rc;
+
+        rc = opal_convertor_pack(convertor, &iov, &iov_count, &max_data);
+        if (rc < 0) {
+            mca_btl_self_free(btl, &frag->base);
+            return NULL;
+        }
+
+        *size = max_data;
+        frag->segments[0].seg_len = reserve + max_data;
+```
+
+当inline_send = false的时候，就走的if分支。
+
+此时需要创建一个iovec的数据结构，iovec 是一个标准的 I/O 向量结构，包含 iov_base（指针）和 iov_len（长度）两个字段。在处理非连续数据时，它用于指定 opal_convertor_pack 函数将数据打包到哪个缓冲区位置。
+
+这里的iovec的赋值更加确定了我们之前解释的segments.
+
+可以看到iovec的iov_base的地址跳过了reserve, 充分说明是给PML层的头部预留的空间。
+
+之后通过`opal_convertor_pack`函数将数据打包到iovec指向的地址中。
+
+最后更新segments[0].seg_len。
+
+这里可能比较疑惑seg的addr怎么没有像连续数据那样设置，因为在frag的构造函数中已经指向了frag->data了，而上面iovec拷贝的目标地址正是frag->data.
 
 ### btl_send - 消息发送
 
+```
+/**
+ * Initiate a send to the peer.
+ *
+ * @param btl (IN)      BTL module
+ * @param peer (IN)     BTL peer addressing
+ */
+
+static int mca_btl_self_send(struct mca_btl_base_module_t *btl,
+                             struct mca_btl_base_endpoint_t *endpoint,
+                             struct mca_btl_base_descriptor_t *des, mca_btl_base_tag_t tag)
+{
+    mca_btl_active_message_callback_t *reg = mca_btl_base_active_message_trigger + tag;
+    mca_btl_base_receive_descriptor_t recv_desc = {.endpoint = endpoint,
+                                                   .des_segments = des->des_segments,
+                                                   .des_segment_count = des->des_segment_count,
+                                                   .tag = tag,
+                                                   .cbdata = reg->cbdata};
+    int btl_ownership = (des->des_flags & MCA_BTL_DES_FLAGS_BTL_OWNERSHIP);
+
+    /* upcall */
+    reg->cbfunc(btl, &recv_desc);
+
+    /* send completion */
+    if (des->des_flags & MCA_BTL_DES_SEND_ALWAYS_CALLBACK) {
+        des->des_cbfunc(btl, endpoint, des, OPAL_SUCCESS);
+    }
+    if (btl_ownership) {
+        mca_btl_self_free(btl, des);
+    }
+    return 1;
+}
+```
+
+在send函数中，由于self组件是同线程内使用，所以不需要任何的传送机制。
+
+直接调用回调函数模拟接收就可以了。
+
+MCA_BTL_DES_SEND_ALWAYS_CALLBACK宏用来判断是否需要调用des的回调。
+
+btl_ownership用来判断是否需要由btl层释放描述符。
+
 ### btl_sendi - 立即发送
+
+sendi函数是指的立即发送，也就是将prepare_src和send函数合并到一步"原子性"的完成。
+
+先看一下函数的定义：
+
+```
+static int mca_btl_self_sendi(struct mca_btl_base_module_t *btl,
+                              struct mca_btl_base_endpoint_t *endpoint,
+                              struct opal_convertor_t *convertor, void *header, size_t header_size,
+                              size_t payload_size, uint8_t order, uint32_t flags,
+                              mca_btl_base_tag_t tag, mca_btl_base_descriptor_t **descriptor)
+```
+
+这里需要注意几个参数：
+
+- payload_size: 负载数据大小
+- header_size: 协议头大小
+
+endpoint不需要注意，在add_procs里面我们设置成-1了也就是没用到这东西
+
+在sendi的开头，先是进行了如下操作：
+
+```
+    if (!payload_size ||
+        !(opal_convertor_need_buffers(convertor) ||
+          opal_convertor_on_device(convertor))) {
+        void *data_ptr = NULL;
+        if (payload_size) {
+            opal_convertor_get_current_pointer(convertor, &data_ptr);
+        }
+
+        mca_btl_base_segment_t segments[2] = {{.seg_addr.pval = header, .seg_len = header_size},
+                                              {.seg_addr.pval = data_ptr, .seg_len = payload_size}};
+        mca_btl_base_descriptor_t des = {.des_segments = segments,
+                                         .des_segment_count = payload_size ? 2 : 1,
+                                         .des_flags = 0};
+
+        (void) mca_btl_self_send(btl, endpoint, &des, tag);
+        return OPAL_SUCCESS;
+    }
+```
+
+这一条路径就是快速路径，可以看到是直接用的临时变量des和segments，而不是用的alloc的frag.
+
+因为调用 mca_btl_self_alloc 需要从内存池中分配片段，涉及内存池操作和可能的锁竞争。
+
+如果负载数据大小为0 || (是连续的数据 && 数据不在设备上)，那么就执行这个if函数。
+
+人话：负载数据大小为0或者内联发送
+
+进入这个if的时候会再次判断是否payload_size是否不为0,如果不为0，就获取convertor的指针到data_ptr中。
+
+封装进入segments, 设置协议头地址和大小/数据地址和大小。
+
+最后将segments给到des, 然后直接调用send函数。
+
+如果没有成功进入快速路径的话，就走的如下代码：
+
+```
+    frag = mca_btl_self_prepare_src(btl, endpoint, convertor, order, header_size, &payload_size,
+                                    flags | MCA_BTL_DES_FLAGS_BTL_OWNERSHIP);
+    if (NULL == frag) {
+        if( NULL != descriptor ) {
+            *descriptor = NULL;
+        }
+        return OPAL_ERR_OUT_OF_RESOURCE;
+    }
+
+    memcpy(frag->des_segments[0].seg_addr.pval, header, header_size);
+    (void) mca_btl_self_send(btl, endpoint, frag, tag);
+    return OPAL_SUCCESS;
+```
+
+
+慢速路径其实就是将prepare_src和send函数合并到一起并没有做性能优化，唯一需要注意的就是通过`memcpy`函数获得了协议头的数据。
 
 ### btl_put/btl_get - RDMA put/get操作
 
