@@ -68,7 +68,7 @@ Open MPI 支持广泛的平台：
 
 如果使用源码编译，你可以轻松的通过以下命令做到：
 
-```
+```bash
 ./autogen.pl && ./configure --prefix=/opt/openmpi && make -j64 && make install
 ```
 
@@ -78,7 +78,7 @@ Open MPI 支持广泛的平台：
 
 先从简单的helloworld开始：
 
-```
+```c
 #include <mpi.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -100,7 +100,7 @@ int main(int argc, char** argv) {
 
 运行以下命令进行编译：
 
-```
+```bash
 mpicc -o helloworld helloworld.c
 ```
 
@@ -108,7 +108,7 @@ mpicc -o helloworld helloworld.c
 
 如果你只有一个机器，你可以直接运行：
 
-```
+```bash
 mpirun -np 2 --mca btl self,sm helloworld
 ```
 
@@ -118,7 +118,7 @@ mpirun -np 2 --mca btl self,sm helloworld
 
 然后编写一个host file去澄清他们的ip地址：
 
-```
+```bash
 192.168.1.101 slots=8
 192.168.1.102 slots=8
 ```
@@ -127,7 +127,7 @@ slots表示每块板子能并行的核心数，通常是芯片的cpu核心数
 
 现在开始运行：
 
-```
+```bash
 mpirun -np 2 --hostfile hosts.txt /home/troy/helloworld
 ```
 

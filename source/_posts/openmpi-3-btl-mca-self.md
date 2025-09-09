@@ -13,7 +13,7 @@ categories:
 
 在opal/mca/btl/self目录中，可以看到如下文件：
 
-```
+```bash
 ❯ tree
 .
 ├── btl_self.c
@@ -33,7 +33,7 @@ categories:
 
 除去不需要关心的编译相关和注释相关，我们剩下了这三个内容：
 
-```
+```bash
 ❯ tree
 .
 ├── btl_self.c
@@ -51,7 +51,7 @@ categories:
 
 在btl_self_component.c中，一共包含了四个函数：
 
-```
+```c
 static int mca_btl_self_component_register(void);
 static int mca_btl_self_component_open(void);
 static int mca_btl_self_component_close(void);
@@ -123,7 +123,7 @@ register → open → init → close
 
 在open/close中第一次见到了面向对象的真容
 
-```
+```c
 static int mca_btl_self_component_open(void)
 {
     /* initialize objects */
@@ -149,7 +149,7 @@ static int mca_btl_self_component_close(void)
 
 首先来看open函数中对opal_free_list_t这个类的构造宏是如何构成的:
 
-```
+```c
 #define OBJ_CONSTRUCT(object, type)                        \
     do {                                                   \
         OBJ_CONSTRUCT_INTERNAL((object), OBJ_CLASS(type)); \
@@ -175,7 +175,7 @@ OBJ_CONSTRUCT本质上就是调用OBJ_CONSTRUCT_INTERNAL.
 
 根据opal_class_initialize的注释也能看出:
 
-```
+```c
 /*
  * Lazy initialization of class descriptor.
  */
@@ -189,7 +189,7 @@ void opal_class_initialize(opal_class_t *cls)
 
 之后会调用opal_obj_run_constructors函数来运行构造函数
 
-```
+```c
 /**
  * Run the hierarchy of class constructors for this object, in a
  * parent-first order.
@@ -226,7 +226,7 @@ frag相当于在这个基础描述符上增加了一些东西。
 
 frag定义如下:
 
-```
+```c
 /**
  * shared memory send fragment derived type.
  */
@@ -252,7 +252,7 @@ typedef struct mca_btl_self_frag_t mca_btl_self_frag_rdma_t;
 
 segment定义如下:
 
-```
+```c
 /**
  * Describes a region/segment of memory that is addressable
  * by an BTL.
@@ -286,7 +286,7 @@ typedef struct mca_btl_base_segment_t mca_btl_base_segment_t;
 
 frag这里又用到了我们在component中提到的类思想,在btl_self_frag.c中实现了类的构造函数：
 
-```
+```c
 static inline void mca_btl_self_frag_constructor(mca_btl_self_frag_t *frag)
 {
     frag->base.des_flags = 0;
@@ -329,7 +329,7 @@ OBJ_CLASS_INSTANCE(mca_btl_self_frag_rdma_t, mca_btl_base_descriptor_t,
 
 OBJ_CLASS_INSTANCE宏是定义类的实例，具体定义如下:
 
-```
+```c
 /**
  * Static initializer for a class descriptor
  *
@@ -355,7 +355,7 @@ OBJ_CLASS_INSTANCE宏是定义类的实例，具体定义如下:
 
 拿frag_eager举例，frag_eager的定义在.h文件中为:
 
-```
+```c
 /**
  * shared memory send fragment derived type.
  */
@@ -379,7 +379,7 @@ typedef struct mca_btl_self_frag_t mca_btl_self_frag_eager_t;
 
 在frag.h文件中进行了类的声明：
 
-```
+```c
 OBJ_CLASS_DECLARATION(mca_btl_self_frag_eager_t);
 OBJ_CLASS_DECLARATION(mca_btl_self_frag_send_t);
 OBJ_CLASS_DECLARATION(mca_btl_self_frag_rdma_t);
@@ -387,7 +387,7 @@ OBJ_CLASS_DECLARATION(mca_btl_self_frag_rdma_t);
 
 OBJ_CLASS_DECLARATION的定义如下:
 
-```
+```c
 /**
  * Declaration for class descriptor
  *
@@ -415,7 +415,7 @@ opal_free_list 是 Open MPI 中的一个高效内存管理机制，用于预分�
 
 opal_free_list_init函数定义如下：
 
-```
+```c
 /**
  * Initialize a free list.
  *
@@ -467,7 +467,7 @@ OPAL_DECLSPEC int opal_free_list_init(opal_free_list_t *free_list, size_t frag_s
 
 回到component的调用中：
 
-```
+```c
     ret = opal_free_list_init(&mca_btl_self_component.self_frags_eager,
                               sizeof(mca_btl_self_frag_eager_t) + mca_btl_self.btl_eager_limit,
                               opal_cache_line_size, OBJ_CLASS(mca_btl_self_frag_eager_t), 0,
@@ -493,7 +493,7 @@ opal_free_list只是一个数据结构，需要实现真正数据交互还需要
 
 #### opal_free_list_init
 
-```
+```c
 int opal_free_list_init(opal_free_list_t *flist, size_t frag_size, size_t frag_alignment,
                         opal_class_t *frag_class, size_t payload_buffer_size,
                         size_t payload_buffer_alignment, int num_elements_to_alloc,
@@ -522,7 +522,7 @@ int opal_free_list_init(opal_free_list_t *flist, size_t frag_size, size_t frag_a
 
 其中调用` opal_free_list_grow_st`才是真正能够实现携带类构造函数的函数：
 
-```
+```c
 int opal_free_list_grow_st(opal_free_list_t *flist, size_t num_elements,
                            opal_free_list_item_t **item_out)
 {
@@ -555,7 +555,7 @@ opal_free_list_return函数可以释放一个list中的携带类。
 
 接下来就是实现对于btl framework需要实现的ops了：
 
-```
+```c
 /* btl self module */
 mca_btl_base_module_t mca_btl_self = {.btl_component = &mca_btl_self_component.super,
                                       .btl_add_procs = mca_btl_self_add_procs,
@@ -584,7 +584,7 @@ add_procs负责：
 
 self的add_procs实现非常简单, 因为只需要处理本进程内：
 
-```
+```c
 /**
  * PML->BTL notification of change in the process list.
  * PML->BTL Notification that a receive fragment has been matched.
@@ -635,7 +635,7 @@ static int mca_btl_self_add_procs(struct mca_btl_base_module_t *btl, size_t npro
 
 用于清理进程相关资源, self的实现很简单，直接返回成功，因为没有需要清理的资源。
 
-```
+```c
 /**
  * PML->BTL notification of change in the process list.
  *
@@ -657,7 +657,7 @@ static int mca_btl_self_del_procs(struct mca_btl_base_module_t *btl, size_t npro
 
 self实现如下:
 
-```
+```c
 /**
  * Allocate a segment.
  *
@@ -702,7 +702,7 @@ prepare_src 可以根据数据特性选择最优的处理方式。比如对于�
 
 这点我们会在下面的代码看到：
 
-```
+```c
 /**
  * Prepare data for send
  *
@@ -749,7 +749,7 @@ static struct mca_btl_base_descriptor_t *mca_btl_self_prepare_src(
 
 #### 连续数据内联准备发送
 
-```
+```c
     } else {
         void *data_ptr;
 
@@ -775,7 +775,7 @@ static struct mca_btl_base_descriptor_t *mca_btl_self_prepare_src(
 
 #### 非连续数据或非本地数据（在设备上）准备发送
 
-```
+```c
     /* non-contiguous data */
     if (OPAL_UNLIKELY(!inline_send)) {
         struct iovec iov = {.iov_len = *size,
@@ -810,7 +810,7 @@ static struct mca_btl_base_descriptor_t *mca_btl_self_prepare_src(
 
 ### btl_send - 消息发送
 
-```
+```c
 /**
  * Initiate a send to the peer.
  *
@@ -858,7 +858,7 @@ sendi函数是指的立即发送，也就是将prepare_src和send函数合并到
 
 先看一下函数的定义：
 
-```
+```c
 static int mca_btl_self_sendi(struct mca_btl_base_module_t *btl,
                               struct mca_btl_base_endpoint_t *endpoint,
                               struct opal_convertor_t *convertor, void *header, size_t header_size,
@@ -875,7 +875,7 @@ endpoint不需要注意，在add_procs里面我们设置成-1了也就是没用�
 
 在sendi的开头，先是进行了如下操作：
 
-```
+```c
     if (!payload_size ||
         !(opal_convertor_need_buffers(convertor) ||
           opal_convertor_on_device(convertor))) {
@@ -911,7 +911,7 @@ endpoint不需要注意，在add_procs里面我们设置成-1了也就是没用�
 
 如果没有成功进入快速路径的话，就走的如下代码：
 
-```
+```c
     frag = mca_btl_self_prepare_src(btl, endpoint, convertor, order, header_size, &payload_size,
                                     flags | MCA_BTL_DES_FLAGS_BTL_OWNERSHIP);
     if (NULL == frag) {
@@ -933,7 +933,7 @@ endpoint不需要注意，在add_procs里面我们设置成-1了也就是没用�
 
 self组件对于rdma的实现相当简单粗暴，因为都是同一个进程内的内存，所以直接可以memcpy
 
-```
+```c
 static int mca_btl_self_put(mca_btl_base_module_t *btl, struct mca_btl_base_endpoint_t *endpoint,
                             void *local_address, uint64_t remote_address,
                             mca_btl_base_registration_handle_t *local_handle,

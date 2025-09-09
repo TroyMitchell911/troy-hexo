@@ -65,7 +65,7 @@ MCA参数可以通过以下几种方式进行设置，按优先级列出：
 
 优先级最高的方法是在命令行中设置 MCA 参数。例如：
 
-```
+```bash
 shell$ mpirun --mca mpi_show_handle_leaks 1 -np 4 a.out
 ```
 
@@ -73,7 +73,7 @@ shell$ mpirun --mca mpi_show_handle_leaks 1 -np 4 a.out
 
 设置包含空格的值时，需要使用引号，以确保 Shell 能够将多个标记理解为一个值。例如：
 
-```
+```bash
 shell$ mpirun --mca param "value with multiple words" ...
 ```
 
@@ -89,25 +89,25 @@ mpirun --tune CLI 选项允许用户在单个文件中指定 MCA 参数和环境
 
 假设有一个已调整的参数文件名为 foo.conf ，它与应用程序 a.out 放在同一目录中。用户通常会以如下方式运行该应用程序：
 
-```
+```bash
 shell$ mpirun -np 2 a.out
 ```
 
 要使用 foo.conf 调整参数文件，此命令行更改为：
 
-```
+```bash
 shell$ mpirun -np 2 --tune foo.conf a.out
 ```
 
 如果要使用多个文件，则可以将已调优的参数文件组合在一起。如果还有一个名为 bar.conf 的已调优参数文件，则可以按如下方式将其添加到命令行：
 
-```
+```bash
 shell$ mpirun -np 2 --tune foo.conf,bar.conf a.out
 ```
 
 已调整文件的内容由一行或多行组成，每行包含零个或多个 -x 和 –mca 选项。不允许使用注释。例如，以下已调整文件：
 
-```
+```bash
 -x envvar1=value1 -mca param1 value1 -x envvar2
 -mca param2 value2
 -x envvar3
@@ -115,7 +115,7 @@ shell$ mpirun -np 2 --tune foo.conf,bar.conf a.out
 
 相当于:
 
-```
+```bash
 shell$ mpirun \
     -x envvar1=value1 -mca param1 value1 -x envvar2 \
     -mca param2 value2
