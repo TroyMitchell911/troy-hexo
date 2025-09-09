@@ -5,7 +5,11 @@ tags:
   - openmpi
 categories:
   - openmpi
+series:
+  - openmpi
 ---
+
+{% series openmpi %}
 
 Open MPI 是一个高度可定制的系统；它可以通过配置文件、命令行参数和环境变量进行配置。Open MPI 配置系统的主要功能是通过模块化组件架构 (MCA) 实现的。
 

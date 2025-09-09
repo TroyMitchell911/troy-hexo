@@ -5,7 +5,11 @@ tags:
   - openmpi
 categories:
   - openmpi
+series:
+  - openmpi
 ---
+
+{% series openmpi %}
 
 在openmpi[2]中，已经分析了openmpi的模块化架构。对于本章节来说，上一章提到的framework对应的是btl;component对应的就是self; mca的意思就是mca模块🤣
 

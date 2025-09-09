@@ -1,11 +1,15 @@
 ---
 title: openmpi[1] 什么是openmpi
-date: 2025-09-04 09:57:36
+date: 2025-09-08 09:57:36
 tags:
   - openmpi
 categories:
   - openmpi
+series:
+  - openmpi
 ---
+
+{% series openmpi %}
 
 ## 什么是openmpi?
 
