@@ -105,3 +105,9 @@ deploy:
   type: git
   repo: git@github.com:Troyself/Troyself.github.io.git
   branch: main
+
+search:
+  path: search.xml
+  field: post
+  format: html
+  limit: 10000

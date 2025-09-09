@@ -355,6 +355,8 @@ katex:
 # search (搜索)
 # see https://butterfly.js.org/posts/ceeb73f/#搜索系統
 # --------------------------------------
+search:
+  use: local_search
 
 # Algolia search
 algolia_search:
@@ -362,9 +364,8 @@ algolia_search:
   hits:
     per_page: 6
 
-# Local search
 local_search:
-  enable: false
+  enable: true
   # Preload the search data when the page loads.
   preload: false
   # Show top n results per article, show all results by setting to -1
