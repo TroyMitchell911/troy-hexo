@@ -160,10 +160,10 @@ post_copyright:
 
 # Sponsor/reward
 reward:
-  enable: false
-  text:
+  enable: true
+  text: Buy me a coffee
   QR_code:
-    # - img: /img/wechat.jpg
+     - img: /img/wxzsm.jpg
     #   link:
     #   text: wechat
     # - img: /img/alipay.jpg
