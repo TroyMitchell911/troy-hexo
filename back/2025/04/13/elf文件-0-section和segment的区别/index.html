@@ -1,0 +1,333 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>elf文件[0]-section和segment的区别 | Troy's blog</title><meta name="author" content="Troy Mitchell"><meta name="copyright" content="Troy Mitchell"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="系列: elf文件[0]-section和segment的区别    Section 是给链接器和调试器看的，Segment 是给程序加载器（比如内核、bootloader）加载用的。 具体区别   对比项 Section（段） Segment（程序段）    来自哪儿 Section Header Table（由 shoff 定位） Program Header Table（由 phoff 定位">
+<meta property="og:type" content="article">
+<meta property="og:title" content="elf文件[0]-section和segment的区别">
+<meta property="og:url" content="https://blog.troy-y.org/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/index.html">
+<meta property="og:site_name" content="Troy&#39;s blog">
+<meta property="og:description" content="系列: elf文件[0]-section和segment的区别    Section 是给链接器和调试器看的，Segment 是给程序加载器（比如内核、bootloader）加载用的。 具体区别   对比项 Section（段） Segment（程序段）    来自哪儿 Section Header Table（由 shoff 定位） Program Header Table（由 phoff 定位">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/133468432?v=4">
+<meta property="article:published_time" content="2025-04-13T15:57:37.000Z">
+<meta property="article:modified_time" content="2025-04-13T16:05:53.178Z">
+<meta property="article:author" content="Troy Mitchell">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/133468432?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "elf文件[0]-section和segment的区别",
+  "url": "https://blog.troy-y.org/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/",
+  "image": "https://avatars.githubusercontent.com/u/133468432?v=4",
+  "datePublished": "2025-04-13T15:57:37.000Z",
+  "dateModified": "2025-04-13T16:05:53.178Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Troy Mitchell",
+      "url": "https://blog.troy-y.org/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="https://avatars.githubusercontent.com/u/133468432?v=4"><link rel="canonical" href="https://blog.troy-y.org/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 8 || hour >= 19
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'elf文件[0]-section和segment的区别',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/top_img.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Troy's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">elf文件[0]-section和segment的区别</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">elf文件[0]-section和segment的区别</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-04-13T15:57:37.000Z" title="发表于 2025-04-13 23:57:37">2025-04-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-04-13T16:05:53.178Z" title="更新于 2025-04-14 00:05:53">2025-04-14</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">605</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>1分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>系列:</p>
+<ul class="series-items"><li><a href="/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/" title="elf文件[0]-section和segment的区别">elf文件[0]-section和segment的区别</a></li></ul>
+
+
+
+<p>Section 是给链接器和调试器看的，Segment 是给程序加载器（比如内核、bootloader）加载用的。</p>
+<h2 id="具体区别"><a href="#具体区别" class="headerlink" title="具体区别"></a>具体区别</h2><table>
+<thead>
+<tr>
+<th>对比项</th>
+<th>Section（段）</th>
+<th>Segment（程序段）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>来自哪儿</td>
+<td><strong>Section Header Table</strong>（由 <code>shoff</code> 定位）</td>
+<td><strong>Program Header Table</strong>（由 <code>phoff</code> 定位）</td>
+</tr>
+<tr>
+<td>用途</td>
+<td>给 <strong>链接器</strong>、<strong>调试器</strong> 用</td>
+<td>给 <strong>加载器（如 exec）</strong> 用</td>
+</tr>
+<tr>
+<td>是否加载进内存</td>
+<td>不一定，比如 <code>.symtab</code>、<code>.strtab</code> 等只调试用</td>
+<td>是的，<code>PT_LOAD</code> 类型会加载进内存</td>
+</tr>
+<tr>
+<td>典型内容</td>
+<td><code>.text</code>, <code>.data</code>, <code>.bss</code>, <code>.rodata</code> 等</td>
+<td>一个 Segment 可能包含多个 Section</td>
+</tr>
+<tr>
+<td>是否可选</td>
+<td>可选（<code>strip</code> 可移除）</td>
+<td>必须存在，运行离不开它</td>
+</tr>
+<tr>
+<td>ELF 文件结构中</td>
+<td>在 <strong>Section Header Table</strong> 描述</td>
+<td>在 <strong>Program Header Table</strong> 描述</td>
+</tr>
+</tbody></table>
+<h2 id="类比理解"><a href="#类比理解" class="headerlink" title="类比理解"></a>类比理解</h2><p>假设你在打包东西出门旅行：</p>
+<ul>
+<li><strong>Section（段）</strong>：像你家衣柜里的“衣服”“裤子”“电器”“洗漱包”这些分类，存储和组织方便，归类清晰（链接器喜欢）。</li>
+<li><strong>Segment（程序段）</strong>：像你把这些打包进行李箱的“格子”，有的格子是专门放衣服的，有的是放易碎品的（加载器关心怎么加载进“内存”）。</li>
+</ul>
+<h2 id="举个例子"><a href="#举个例子" class="headerlink" title="举个例子"></a>举个例子</h2><p>你的 ELF 文件里有这些 Section：</p>
+<ul>
+<li><code>.text</code> — 代码段</li>
+<li><code>.data</code> — 初始化数据</li>
+<li><code>.bss</code> — 未初始化数据</li>
+<li><code>.rodata</code> — 常量数据</li>
+</ul>
+<p>它们可能会被合并进两个 Segment：</p>
+<ul>
+<li>一个只读的 segment：包含 <code>.text</code> + <code>.rodata</code></li>
+<li>一个读写的 segment：包含 <code>.data</code> + <code>.bss</code></li>
+</ul>
+<h2 id="为什么要合并"><a href="#为什么要合并" class="headerlink" title="为什么要合并"></a>为什么要合并</h2><p>为了页对齐、简化加载和权限控制。</p>
+<h3 id="页对齐"><a href="#页对齐" class="headerlink" title="页对齐"></a>页对齐</h3><ul>
+<li><p>Segment 通常按页对齐（如 0x1000），以便于映射和访问。</p>
+</li>
+<li><p>Section 之间未必页对齐，把它们分别搞成 Segment 会浪费内存（碎片）。</p>
+</li>
+<li><p>合并后可以使用<strong>连续的物理页</strong>映射，简化内存管理，提高性能。</p>
+</li>
+</ul>
+<h3 id="简化加载"><a href="#简化加载" class="headerlink" title="简化加载"></a>简化加载</h3><p>如果每个 Section 都创建一个 Segment，程序加载会非常复杂、低效（更多系统调用、更多内存碎片）。Segment 数量少，加载效率高，<code>exec</code> 调用成本低</p>
+<h3 id="权限控制"><a href="#权限控制" class="headerlink" title="权限控制"></a>权限控制</h3><p>操作系统通常以「页」为单位管理内存（一般是 4KB）。每个 Segment 会映射到一段虚拟地址空间，并设置相应权限。</p>
+<p>比如：</p>
+<table>
+<thead>
+<tr>
+<th>Segment 内容</th>
+<th>权限</th>
+<th>包含的 Section</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>代码段（只读可执行）</td>
+<td>R-X</td>
+<td><code>.text</code>, <code>.rodata</code></td>
+</tr>
+<tr>
+<td>数据段（读写不可执行）</td>
+<td>RW-</td>
+<td><code>.data</code>, <code>.bss</code></td>
+</tr>
+</tbody></table>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p><code>Section</code> 是“编译器 &#x2F; 链接器 &#x2F; 调试器”的视角（逻辑结构）</p>
+<p><code>Segment</code> 是“加载器 &#x2F; 内核”的视角（运行时布局）</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org">Troy Mitchell</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/">https://blog.troy-y.org/2025/04/13/elf文件-0-section和segment的区别/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.troy-y.org" target="_blank">Troy's blog</a>！</span></div></div><div class="tag_share"><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/133468432?v=4" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>Buy me a coffee</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wxzsm.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wxzsm.jpg"/></a><div class="post-qr-code-desc"></div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/04/13/linux-i2c%E9%A9%B1%E5%8A%A8%E6%A1%86%E6%9E%B6%E5%88%86%E6%9E%90-1/" title="linux i2c驱动框架分析[1]"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">linux i2c驱动框架分析[1]</div></div><div class="info-2"><div class="info-item-1">系列: linux i2c驱动框架分析[0]linux i2c驱动框架分析[1]  I2C设备驱动程序框架IIC设备驱动是对IIC硬件体系结构中设备端的实现，设备一般挂接在受CPU控制的IIC适配器上，通过IIC适配器与CPU交换数据。设备驱动则是与挂在I2C总线上的具体的设备通讯的驱动。通过I2C总线驱动提供的函数，设备驱动可以忽略不同总线控制器的差异，不考虑其实现细节地与硬件设备通讯。 IIC设备驱动主要包含了数据结构i2c_driver和i2c_client，我们需要根据具体设备实现其中的成员函数。 其中，i2c_client由dts自动生成，如果设备在设备树中有 i2c@xxx 和 your_device@address 的节点，内核会根据设备树生成 i2c_client 实例，然后和匹配的 i2c_driver 执行绑定。 接口i2c_driver首先看下最关键的结构体，这是我们用来和Linux交互的关键核心。 struct i2c_driver &#123;	unsigned int class;	/* Standard driver model...</div></div></div></a><a class="pagination-related" href="/2025/04/20/platform-device-driver-0/" title="platform device driver[0]"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">platform device driver[0]</div></div><div class="info-2"><div class="info-item-1">platform device driver[0]platform device driver[1]  Platform​	在Linux设备驱动模型中 (since v2.6)，需要关心总线，设备和驱动这三个实体。总线将设备与驱动绑定。在设备注册或者注册驱动的时候，总线都会寻找与其相对应的驱动或设备进行匹配。 ​	一个现实的Linux 设备和驱动通凋阁需要挂接在一种总线上，对于本身依附于 PCI.USB，I2C、SPI等的设备而言，自然不是问题但是在嵌人式系统里面，在 Soc 系统中华集成的独立外设控制器、挂接在 Soc 内存空间的外设等却不依附于此类总线。基于这一背景，Linux 发明了一种虚拟的总线，称为platform 总线，相应的设备称为platform_device，而驱动成为platform _driver。 所谓的platform_device并不是与字符设备、块设备和网络设备并列的概念。比如lcd, i2c,...</div></div></div></a></nav><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Troy Mitchell</div><div class="author-info-description">对弈平凡</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/troymitchell911"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="mailto:troymitchell988@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://troy-y.org" target="_blank" title="Me"><i class="fas fa-user" style="color: #6c5ce7;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Words can't describe me</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E5%8C%BA%E5%88%AB"><span class="toc-number">1.</span> <span class="toc-text">具体区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%B1%BB%E6%AF%94%E7%90%86%E8%A7%A3"><span class="toc-number">2.</span> <span class="toc-text">类比理解</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BE%E4%B8%AA%E4%BE%8B%E5%AD%90"><span class="toc-number">3.</span> <span class="toc-text">举个例子</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%90%88%E5%B9%B6"><span class="toc-number">4.</span> <span class="toc-text">为什么要合并</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%A1%B5%E5%AF%B9%E9%BD%90"><span class="toc-number">4.1.</span> <span class="toc-text">页对齐</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E5%8C%96%E5%8A%A0%E8%BD%BD"><span class="toc-number">4.2.</span> <span class="toc-text">简化加载</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%9D%83%E9%99%90%E6%8E%A7%E5%88%B6"><span class="toc-number">4.3.</span> <span class="toc-text">权限控制</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-post-series"><div class="item-headline"><i class="fa-solid fa-layer-group"></i><span>系列文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/13/elf%E6%96%87%E4%BB%B6-0-section%E5%92%8Csegment%E7%9A%84%E5%8C%BA%E5%88%AB/" title="elf文件[0]-section和segment的区别">elf文件[0]-section和segment的区别</a><time datetime="2025-04-13T15:57:37.000Z" title="发表于 2025-04-13 23:57:37">2025-04-13</time></div></div></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树">Linux设备树[1]-解析设备树</a><time datetime="2025-04-26T11:23:36.000Z" title="发表于 2025-04-26 19:23:36">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux">Uboot如何传递bootargs给Linux</a><time datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式">Linux设备树[0]-理解dtb格式</a><time datetime="2025-04-26T07:34:45.000Z" title="发表于 2025-04-26 15:34:45">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/" title="嵌入式Linux面经-随意随缘不完整版">嵌入式Linux面经-随意随缘不完整版</a><time datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]">platform device driver[1]</a><time datetime="2025-04-20T13:05:15.000Z" title="发表于 2025-04-20 21:05:15">2025-04-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2024 - 2025 By Troy Mitchell</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.2.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.5</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><script src="https://fastly.jsdelivr.net/gh/sviptzk/HexoStaticFile@latest/Hexo/js/mouse_snow.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

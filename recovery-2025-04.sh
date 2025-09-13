@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cp -r ../blog/2025/04/ public/2025
+cp -r ./back/2025/04/ public/2025

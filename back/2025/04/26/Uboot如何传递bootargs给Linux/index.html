@@ -1,0 +1,269 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Uboot如何传递bootargs给Linux | Troy's blog</title><meta name="author" content="Troy Mitchell"><meta name="copyright" content="Troy Mitchell"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="Uboot如何传递bootargsuboot并不是直接将bootargs传递给kernel，而是修改dts中的chosen节点实现的。 在uboot中可以发现该函数： int fdt_chosen(void *fdt)&#123;	struct abuf buf &#x3D; &#123;&#125;;	int   nodeoffset;	int   err;	const char *str;		&#x2F;* us">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Uboot如何传递bootargs给Linux">
+<meta property="og:url" content="https://blog.troy-y.org/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/index.html">
+<meta property="og:site_name" content="Troy&#39;s blog">
+<meta property="og:description" content="Uboot如何传递bootargsuboot并不是直接将bootargs传递给kernel，而是修改dts中的chosen节点实现的。 在uboot中可以发现该函数： int fdt_chosen(void *fdt)&#123;	struct abuf buf &#x3D; &#123;&#125;;	int   nodeoffset;	int   err;	const char *str;		&#x2F;* us">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/133468432?v=4">
+<meta property="article:published_time" content="2025-04-26T10:33:15.000Z">
+<meta property="article:modified_time" content="2025-04-26T11:10:09.820Z">
+<meta property="article:author" content="Troy Mitchell">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="uboot">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/133468432?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Uboot如何传递bootargs给Linux",
+  "url": "https://blog.troy-y.org/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/",
+  "image": "https://avatars.githubusercontent.com/u/133468432?v=4",
+  "datePublished": "2025-04-26T10:33:15.000Z",
+  "dateModified": "2025-04-26T11:10:09.820Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Troy Mitchell",
+      "url": "https://blog.troy-y.org/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="https://avatars.githubusercontent.com/u/133468432?v=4"><link rel="canonical" href="https://blog.troy-y.org/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 8 || hour >= 19
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Uboot如何传递bootargs给Linux',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/top_img.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Troy's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">Uboot如何传递bootargs给Linux</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Uboot如何传递bootargs给Linux</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-04-26T11:10:09.820Z" title="更新于 2025-04-26 19:10:09">2025-04-26</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">294</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>1分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="Uboot如何传递bootargs"><a href="#Uboot如何传递bootargs" class="headerlink" title="Uboot如何传递bootargs"></a>Uboot如何传递bootargs</h1><p>uboot并不是直接将bootargs传递给kernel，而是修改dts中的chosen节点实现的。</p>
+<p>在uboot中可以发现该函数：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">fdt_chosen</span><span class="params">(<span class="type">void</span> *fdt)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">abuf</span> <span class="title">buf</span> =</span> &#123;&#125;;</span><br><span class="line">	<span class="type">int</span>   nodeoffset;</span><br><span class="line">	<span class="type">int</span>   err;</span><br><span class="line">	<span class="type">const</span> <span class="type">char</span> *str;		<span class="comment">/* used to set string properties */</span></span><br><span class="line">	</span><br><span class="line">	...</span><br><span class="line">	<span class="comment">/* find or create &quot;/chosen&quot; node. */</span></span><br><span class="line">	nodeoffset = fdt_find_or_add_subnode(fdt, <span class="number">0</span>, <span class="string">&quot;chosen&quot;</span>);</span><br><span class="line">	<span class="keyword">if</span> (nodeoffset &lt; <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">return</span> nodeoffset;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	str = board_fdt_chosen_bootargs(fdt_get_property(fdt, nodeoffset,</span><br><span class="line">							 <span class="string">&quot;bootargs&quot;</span>, <span class="literal">NULL</span>));</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (str) &#123;</span><br><span class="line">		err = fdt_setprop(fdt, nodeoffset, <span class="string">&quot;bootargs&quot;</span>, str,</span><br><span class="line">				  <span class="built_in">strlen</span>(str) + <span class="number">1</span>);</span><br><span class="line">		<span class="keyword">if</span> (err &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="built_in">printf</span>(<span class="string">&quot;WARNING: could not set bootargs %s.\n&quot;</span>,</span><br><span class="line">			       fdt_strerror(err));</span><br><span class="line">			<span class="keyword">return</span> err;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>就不用管这个函数是怎么被调用的了，反正一定是会被调用到的。</p>
+<p>该函数使用<code>fdt_find_or_add_subnode</code>寻找chosen节点，如果没找到chosen节点，就创建一个，随后返回offset。</p>
+<p>随后调用<code>board_fdt_chosen_bootargs</code>函数，该函数定义如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * board_fdt_chosen_bootargs - boards may override this function to use</span></span><br><span class="line"><span class="comment"> *                             alternative kernel command line arguments</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">__weak <span class="type">const</span> <span class="type">char</span> *<span class="title function_">board_fdt_chosen_bootargs</span><span class="params">(<span class="type">const</span> <span class="keyword">struct</span> fdt_property *fdt_ba)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> env_get(<span class="string">&quot;bootargs&quot;</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该函数直接将环境变量中的<code>bootargs</code>返回，str被赋值为bootargs。</p>
+<p>随后调用<code> fdt_setprop</code>去设置bootargs。</p>
+<p>至此bootargs修改完毕。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><table>
+<thead>
+<tr>
+<th>情况</th>
+<th>最后 kernel 用的 bootargs 来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>U-Boot bootargs 非空</td>
+<td>用 U-Boot 传的 bootargs</td>
+</tr>
+<tr>
+<td>U-Boot bootargs 为空</td>
+<td>用 Linux DTS 自己的 chosen节点作为bootargs</td>
+</tr>
+</tbody></table>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org">Troy Mitchell</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/">https://blog.troy-y.org/2025/04/26/Uboot如何传递bootargs给Linux/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.troy-y.org" target="_blank">Troy's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/linux/">linux</a><a class="post-meta__tags" href="/tags/kernel/">kernel</a><a class="post-meta__tags" href="/tags/uboot/">uboot</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/133468432?v=4" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>Buy me a coffee</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wxzsm.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wxzsm.jpg"/></a><div class="post-qr-code-desc"></div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">Linux设备树[0]-理解dtb格式</div></div><div class="info-2"><div class="info-item-1">Linux设备树[0]-理解dtb格式  DTBdtb文件由dts通过dtc命令编译而来。 具体结构应该如下：  alignment gap对齐中间的alignment gap部分表示对齐间隙，它并非是必须的，它是否被提供以及大小由具体的平台对数据对齐和的要求以及数据是否已经对齐来决定。 elf headerDTB文件跟elf文件一样，都有一个header，也就是meta-data。dtb文件的meta-data大小为40字节。 可以看下linux代码中对于dtb头信息的定义： // In scripts/dtc/libfdt/fdt.hstruct fdt_header &#123;	fdt32_t magic;			 /* magic word FDT_MAGIC */	fdt32_t totalsize;		 /* total size of DT block */	fdt32_t off_dt_struct;		 /* offset to structure */	fdt32_t off_dt_strings;		 /* offset to strings...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Linux设备树[1]-解析设备树</div></div><div class="info-2"><div class="info-item-1">Uboot如何将设备树传给kernel在riscv架构下，uboot会将dtb的物理地址放到a1寄存器中。 这点可在arch/riscv/head.S中看到些许端倪。 #ifdef CONFIG_BUILTIN_DTB	la a0, __dtb_start	XIP_FIXUP_OFFSET a0#else	mv a0, a1#endif /* CONFIG_BUILTIN_DTB */	/* Set trap vector to spin forever to help debug */	la a3, .Lsecondary_park	csrw CSR_TVEC, a3	call...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[0]-理解dtb格式</div></div><div class="info-2"><div class="info-item-1">Linux设备树[0]-理解dtb格式  DTBdtb文件由dts通过dtc命令编译而来。 具体结构应该如下：  alignment gap对齐中间的alignment gap部分表示对齐间隙，它并非是必须的，它是否被提供以及大小由具体的平台对数据对齐和的要求以及数据是否已经对齐来决定。 elf headerDTB文件跟elf文件一样，都有一个header，也就是meta-data。dtb文件的meta-data大小为40字节。 可以看下linux代码中对于dtb头信息的定义： // In scripts/dtc/libfdt/fdt.hstruct fdt_header &#123;	fdt32_t magic;			 /* magic word FDT_MAGIC */	fdt32_t totalsize;		 /* total size of DT block */	fdt32_t off_dt_struct;		 /* offset to structure */	fdt32_t off_dt_strings;		 /* offset to strings...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[1]-解析设备树</div></div><div class="info-2"><div class="info-item-1">Uboot如何将设备树传给kernel在riscv架构下，uboot会将dtb的物理地址放到a1寄存器中。 这点可在arch/riscv/head.S中看到些许端倪。 #ifdef CONFIG_BUILTIN_DTB	la a0, __dtb_start	XIP_FIXUP_OFFSET a0#else	mv a0, a1#endif /* CONFIG_BUILTIN_DTB */	/* Set trap vector to spin forever to help debug */	la a3, .Lsecondary_park	csrw CSR_TVEC, a3	call...</div></div></div></a><a class="pagination-related" href="/2024/08/22/OpenHarmony-on-rk3568%E4%BD%BF%E8%83%BDcan/" title="OpenHarmony on rk3568使能can"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-22</div><div class="info-item-2">OpenHarmony on rk3568使能can</div></div><div class="info-2"><div class="info-item-1">EnvOH: v3.2.3chip: rk3568 Content首先查看源码中是否具有CAN_ROCKCHIP选项： ❯ find -name &quot;Kconfig&quot; -exec grep -n &quot;CAN_ROCKCHIP&quot; &#123;&#125; +❯...</div></div></div></a><a class="pagination-related" href="/2024/08/23/Rockchip-%E7%B3%BB%E5%88%97%E8%8A%AF%E7%89%87uboot-distro-cmd/" title="rk3568 uboot distro_cmd"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-23</div><div class="info-item-2">rk3568 uboot distro_cmd</div></div><div class="info-2"><div class="info-item-1">bootcmd在uboot的shell中使用printenv命令可以看到bootcmd的字符串： =&gt; printenv bootcmdbootcmd=boot_android $&#123;devtype&#125; $&#123;devnum&#125;;boot_fit;bootrkp;run distro_bootcmd;  命令解析：    - boot_android: 查找并尝试启动安卓镜像。    - boot_fix: 查找并尝试启动fit格式镜像。    - bootrkp: 查找并尝试启动rk分区镜像。    - run distro_bootcmd: 这就是这篇文章的主角了，distro_bootcmd可以根据不同介质去启动kernel内核，比如kernel可以在sd卡，emmc上，都可以顺利启动。 以上提到的bootcmd可以在include/configs/rockchip-common.h中看到相关定义： #if defined(CONFIG_AVB_VBMETA_PUBLIC_KEY_VALIDATE)#define...</div></div></div></a><a class="pagination-related" href="/2024/07/03/earlycon/" title="earlycon"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-03</div><div class="info-item-2">earlycon</div></div><div class="info-2"><div class="info-item-1">引言earlycon 是一个早期控制台（early console）机制，用于在系统启动的早期阶段提供输出功能。在内核启动过程的早期阶段，标准的控制台设备（如串口、VGA控制台等）可能还没有初始化完成，这时可以使用 earlycon 来输出调试信息，帮助开发者调试内核启动过程中的问题。 如何开启earlycon要在内核启动时启用 earlycon，需要在内核配置中启用几个相关的配置选项： CONFIG_SERIAL_EARLYCONCONFIG_OF_EARLY_FLATTREE  还需要在内核命令行参数中添加相关设置。例如： earlycon=pxa_serial,0xd4017000  具体流程在 Kernel 初始化汇编代码执行完跳转到 start_kernel 之后，setup_arch 调用 parse_early_param，进而在其中执行 early_param...</div></div></div></a><a class="pagination-related" href="/2024/07/17/i2c-adpater-mainline-for-k1-of-spacemit/" title="i2c-adpater-mainline for k1 of spacemit"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-17</div><div class="info-item-2">i2c-adpater-mainline for k1 of spacemit</div></div><div class="info-2"><div class="info-item-1">初步完善框架#include &lt;linux/mod_devicetable.h&gt;#include &lt;linux/module.h&gt;#include &lt;linux/platform_device.h&gt;#include &lt;linux/device.h&gt;#include &lt;linux/i2c.h&gt;#include &lt;linux/err.h&gt;#include &lt;linux/clk.h&gt;#include &quot;i2c-k1x.h&quot;static intspacemit_k1_i2c_xfer(struct i2c_adapter *adapt, struct i2c_msg msgs[], int num) &#123;	struct spacemit_k1_i2c *i2c = i2c_get_adapdata(adapt);	return num;&#125;static u32 spacemit_k1_i2c_functionality(struct i2c_adapter...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Troy Mitchell</div><div class="author-info-description">对弈平凡</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/troymitchell911"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="mailto:troymitchell988@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://troy-y.org" target="_blank" title="Me"><i class="fas fa-user" style="color: #6c5ce7;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Words can't describe me</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs"><span class="toc-number">1.</span> <span class="toc-text">Uboot如何传递bootargs</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%80%BB%E7%BB%93"><span class="toc-number">2.</span> <span class="toc-text">总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树">Linux设备树[1]-解析设备树</a><time datetime="2025-04-26T11:23:36.000Z" title="发表于 2025-04-26 19:23:36">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux">Uboot如何传递bootargs给Linux</a><time datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式">Linux设备树[0]-理解dtb格式</a><time datetime="2025-04-26T07:34:45.000Z" title="发表于 2025-04-26 15:34:45">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/" title="嵌入式Linux面经-随意随缘不完整版">嵌入式Linux面经-随意随缘不完整版</a><time datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]">platform device driver[1]</a><time datetime="2025-04-20T13:05:15.000Z" title="发表于 2025-04-20 21:05:15">2025-04-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2024 - 2025 By Troy Mitchell</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.2.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.5</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><script src="https://fastly.jsdelivr.net/gh/sviptzk/HexoStaticFile@latest/Hexo/js/mouse_snow.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>esp32初始化结构体问题 | Troy's blog</title><meta name="author" content="Troy Mitchell"><meta name="copyright" content="Troy Mitchell"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="在c++使用espidf进行wifi连接时，发现如下代码可以连接： wifi_config_t wifi_config &#x3D; &#123;            .sta &#x3D; &#123;                    .ssid &#x3D; &quot;HBDT-23F&quot;,                    .password &#x3D; &quot;hbishbis&quot;">
+<meta property="og:type" content="article">
+<meta property="og:title" content="esp32初始化结构体问题">
+<meta property="og:url" content="https://blog.troy-y.org/2025/04/09/esp32/index.html">
+<meta property="og:site_name" content="Troy&#39;s blog">
+<meta property="og:description" content="在c++使用espidf进行wifi连接时，发现如下代码可以连接： wifi_config_t wifi_config &#x3D; &#123;            .sta &#x3D; &#123;                    .ssid &#x3D; &quot;HBDT-23F&quot;,                    .password &#x3D; &quot;hbishbis&quot;">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/133468432?v=4">
+<meta property="article:published_time" content="2025-04-09T10:57:04.728Z">
+<meta property="article:modified_time" content="2025-04-09T10:57:04.728Z">
+<meta property="article:author" content="Troy Mitchell">
+<meta property="article:tag" content="mcu">
+<meta property="article:tag" content="esp32">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/133468432?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "esp32初始化结构体问题",
+  "url": "https://blog.troy-y.org/2025/04/09/esp32/",
+  "image": "https://avatars.githubusercontent.com/u/133468432?v=4",
+  "datePublished": "2025-04-09T10:57:04.728Z",
+  "dateModified": "2025-04-09T10:57:04.728Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Troy Mitchell",
+      "url": "https://blog.troy-y.org/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="https://avatars.githubusercontent.com/u/133468432?v=4"><link rel="canonical" href="https://blog.troy-y.org/2025/04/09/esp32/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 8 || hour >= 19
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'esp32初始化结构体问题',
+  isHighlightShrink: false,
+  isToc: false,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/top_img.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Troy's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">esp32初始化结构体问题</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">esp32初始化结构体问题</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-04-09T10:57:04.728Z" title="发表于 2025-04-09 18:57:04">2025-04-09</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-04-09T10:57:04.728Z" title="更新于 2025-04-09 18:57:04">2025-04-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/mcu/">mcu</a><i class="fas fa-angle-right post-meta-separator"></i><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/mcu/esp32/">esp32</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">118</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>1分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><p>在<code>c++</code>使用<code>espidf</code>进行<code>wifi</code>连接时，发现如下代码可以连接：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="type">wifi_config_t</span> wifi_config = &#123;</span><br><span class="line">            .sta = &#123;</span><br><span class="line">                    .ssid = <span class="string">&quot;HBDT-23F&quot;</span>,</span><br><span class="line">                    .password = <span class="string">&quot;hbishbis&quot;</span></span><br><span class="line">            &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>但如下代码不可连接：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="type">wifi_config_t</span> wifi_config;</span><br><span class="line"><span class="built_in">strcpy</span>(wifi_config.sta.ssid, <span class="string">&quot;HBDT-23F&quot;</span>);</span><br><span class="line"><span class="built_in">strcpy</span>(wifi_config.sta.password, <span class="string">&quot;hbishbis&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>经过排查发现<code>espidf</code>对于连接阶段除了<code>ssid</code>和<code>password</code>还使用到了其他变量，所以应该清零结构体内存：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="type">wifi_config_t</span> wifi_config&#123;&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>一个很低级的问题…记录下来时刻警醒。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org">Troy Mitchell</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org/2025/04/09/esp32/">https://blog.troy-y.org/2025/04/09/esp32/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.troy-y.org" target="_blank">Troy's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/mcu/">mcu</a><a class="post-meta__tags" href="/tags/esp32/">esp32</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/133468432?v=4" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>Buy me a coffee</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wxzsm.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wxzsm.jpg"/></a><div class="post-qr-code-desc"></div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/04/09/VirtualBox%E9%94%99%E8%AF%AF-1/" title="VirtualBox错误"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">VirtualBox错误</div></div><div class="info-2"><div class="info-item-1">当我尝试启动虚拟机时遇到了如下错误： Kernel driver not installed (rc=-1908)The VirtualBox Linux kernel driver is either not loaded or not set up correctly. Please try setting it up again by executing&#x27;/sbin/vboxconfig&#x27;as root.If your system has EFI Secure Boot enabled you may also need to sign the kernel modules (vboxdrv, vboxnetflt, vboxnetadp, vboxpci) before you can load them. Please see your Linux system&#x27;s documentation for more information.where: suplibOsInit what: 3...</div></div></div></a><a class="pagination-related" href="/2025/04/10/vercel%E9%83%A8%E7%BD%B2twikoo%E5%90%8E%E8%AF%84%E8%AE%BA%E6%94%B6%E4%B8%8D%E5%88%B0%E9%80%9A%E7%9F%A5%E9%82%AE%E4%BB%B6%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/" title="vercel部署twikoo后评论收不到通知邮件问题解决方法"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">vercel部署twikoo后评论收不到通知邮件问题解决方法</div></div><div class="info-2"><div class="info-item-1">Refhttps://blog.csdn.net/weixin_43931358/article/details/108627559 </div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2024/08/01/clion%E5%BC%80%E5%8F%91esp32/" title="clion开发esp32"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-01</div><div class="info-item-2">clion开发esp32</div></div><div class="info-2"><div class="info-item-1">README本文基于文末的ref链接[Link1]搭建，这里作为一些补充记录。 Chip: esp32c3 System: Ubuntu 22.04 安装idf出现错误在执行.install.sh时遇到如下错误： ./install.shDetecting the Python interpreterChecking &quot;python3&quot; ...Python 3.10.12&quot;python3&quot; has been detectedChecking Python cref: nsa-esp-elf-gdb, riscv32-esp-elf-gdb, xtensa-esp-elf, riscv32-esp-elf, esp32ulp-elf, openocd-esp32, esp-rom-elfsSkipping xtensa-esp-elf-gdb@14.2_20240403 (already installed)Skipping riscv32-esp-elf-gdb@14.2_20240403 (already...</div></div></div></a><a class="pagination-related" href="/2024/08/07/esp32-system-api-Event-Loop-Library/" title="esp32-system-api: Event Loop Library"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-07</div><div class="info-item-2">esp32-system-api: Event Loop Library</div></div><div class="info-2"><div class="info-item-1">Envesp-idf: v5.3-stable 数据结构介绍事件处理函数当事件到达后，运行的函数名为事件处理函数。 事件处理函数要在事件循环创建完成之后调用注册函数注册进入事件循环。 事件处理函数定义如下： typedef void (*esp_event_handler_t)(void* event_handler_arg,                                    esp_event_base_t event_base,                                    int32_t event_id,                                    void* event_data); /**&lt; function called when an event is posted to the queue...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Troy Mitchell</div><div class="author-info-description">对弈平凡</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/troymitchell911"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="mailto:troymitchell988@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://troy-y.org" target="_blank" title="Me"><i class="fas fa-user" style="color: #6c5ce7;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Words can't describe me</div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树">Linux设备树[1]-解析设备树</a><time datetime="2025-04-26T11:23:36.000Z" title="发表于 2025-04-26 19:23:36">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux">Uboot如何传递bootargs给Linux</a><time datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式">Linux设备树[0]-理解dtb格式</a><time datetime="2025-04-26T07:34:45.000Z" title="发表于 2025-04-26 15:34:45">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/" title="嵌入式Linux面经-随意随缘不完整版">嵌入式Linux面经-随意随缘不完整版</a><time datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]">platform device driver[1]</a><time datetime="2025-04-20T13:05:15.000Z" title="发表于 2025-04-20 21:05:15">2025-04-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2024 - 2025 By Troy Mitchell</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.2.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.5</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><script src="https://fastly.jsdelivr.net/gh/sviptzk/HexoStaticFile@latest/Hexo/js/mouse_snow.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

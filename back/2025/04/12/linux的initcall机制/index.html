@@ -1,0 +1,365 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>linux的initcall机制 | Troy's blog</title><meta name="author" content="Troy Mitchell"><meta name="copyright" content="Troy Mitchell"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="什么是initcallinitcall 是Linux 内核中的一种机制，用于在系统启动过程中自动执行初始化函数。这些函数在内核启动阶段被内核自动调用，用于初始化各种子系统、总线、驱动、文件系统等。 也就是说，如果我们的驱动想要被linux调用，就要使用initcall来“通知”linux: 我需要被你调用。 在驱动中我们可以看到xxx_init这样的形式，比如module_init initcal">
+<meta property="og:type" content="article">
+<meta property="og:title" content="linux的initcall机制">
+<meta property="og:url" content="https://blog.troy-y.org/2025/04/12/linux%E7%9A%84initcall%E6%9C%BA%E5%88%B6/index.html">
+<meta property="og:site_name" content="Troy&#39;s blog">
+<meta property="og:description" content="什么是initcallinitcall 是Linux 内核中的一种机制，用于在系统启动过程中自动执行初始化函数。这些函数在内核启动阶段被内核自动调用，用于初始化各种子系统、总线、驱动、文件系统等。 也就是说，如果我们的驱动想要被linux调用，就要使用initcall来“通知”linux: 我需要被你调用。 在驱动中我们可以看到xxx_init这样的形式，比如module_init initcal">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/133468432?v=4">
+<meta property="article:published_time" content="2025-04-12T13:47:06.000Z">
+<meta property="article:modified_time" content="2025-04-13T05:32:40.425Z">
+<meta property="article:author" content="Troy Mitchell">
+<meta property="article:tag" content="linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/133468432?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "linux的initcall机制",
+  "url": "https://blog.troy-y.org/2025/04/12/linux%E7%9A%84initcall%E6%9C%BA%E5%88%B6/",
+  "image": "https://avatars.githubusercontent.com/u/133468432?v=4",
+  "datePublished": "2025-04-12T13:47:06.000Z",
+  "dateModified": "2025-04-13T05:32:40.425Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Troy Mitchell",
+      "url": "https://blog.troy-y.org/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="https://avatars.githubusercontent.com/u/133468432?v=4"><link rel="canonical" href="https://blog.troy-y.org/2025/04/12/linux%E7%9A%84initcall%E6%9C%BA%E5%88%B6/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 8 || hour >= 19
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'linux的initcall机制',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/top_img.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Troy's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">linux的initcall机制</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">linux的initcall机制</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-04-12T13:47:06.000Z" title="发表于 2025-04-12 21:47:06">2025-04-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-04-13T05:32:40.425Z" title="更新于 2025-04-13 13:32:40">2025-04-13</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">2k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>9分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h2 id="什么是initcall"><a href="#什么是initcall" class="headerlink" title="什么是initcall"></a>什么是initcall</h2><p><code>initcall</code> 是<code>Linux</code> 内核中的一种机制，用于在系统启动过程中自动执行<strong>初始化函数</strong>。这些函数在内核启动阶段被内核自动调用，用于初始化各种子系统、总线、驱动、文件系统等。</p>
+<p>也就是说，如果我们的驱动想要被<code>linux</code>调用，就要使用<code>initcall</code>来“通知”<code>linux</code>: 我需要被你调用。</p>
+<p>在驱动中我们可以看到<code>xxx_init</code>这样的形式，比如<code>module_init</code></p>
+<h2 id="initcall的种类"><a href="#initcall的种类" class="headerlink" title="initcall的种类"></a>initcall的种类</h2><p>在<code>linux6.15.0-rc1</code>的<code>include/linux/init.h</code>中可以看到如下代码：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HAVE_ARCH_PREL32_RELOCATIONS</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ____define_initcall(fn, __stub, __name, __sec)		\</span></span><br><span class="line"><span class="meta">	__define_initcall_stub(__stub, fn)			\</span></span><br><span class="line"><span class="meta">	asm(<span class="string">&quot;.section	\&quot;&quot;</span> __sec <span class="string">&quot;\&quot;, \&quot;a\&quot;		\n&quot;</span>	\</span></span><br><span class="line"><span class="meta">	    __stringify(__name) <span class="string">&quot;:			\n&quot;</span>	\</span></span><br><span class="line"><span class="meta">	    <span class="string">&quot;.long	&quot;</span> __stringify(__stub) <span class="string">&quot; - .	\n&quot;</span>	\</span></span><br><span class="line"><span class="meta">	    <span class="string">&quot;.previous					\n&quot;</span>);	\</span></span><br><span class="line"><span class="meta">	static_assert(__same_type(initcall_t, &amp;fn));</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ____define_initcall(fn, __unused, __name, __sec)	\</span></span><br><span class="line"><span class="meta">	static initcall_t __name __used 			\</span></span><br><span class="line"><span class="meta">		__attribute__((__section__(__sec))) = fn;</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __unique_initcall(fn, id, __sec, __iid)			\</span></span><br><span class="line"><span class="meta">	____define_initcall(fn,					\</span></span><br><span class="line"><span class="meta">		__initcall_stub(fn, __iid, id),			\</span></span><br><span class="line"><span class="meta">		__initcall_name(initcall, __iid, id),		\</span></span><br><span class="line"><span class="meta">		__initcall_section(__sec, __iid))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ___define_initcall(fn, id, __sec)			\</span></span><br><span class="line"><span class="meta">	__unique_initcall(fn, id, __sec, __initcall_id(fn))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __define_initcall(fn, id) ___define_initcall(fn, id, .initcall##id)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Early initcalls run before initializing SMP.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Only for built-in code, not modules.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> early_initcall(fn)		__define_initcall(fn, early)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * A &quot;pure&quot; initcall has no dependencies on anything else, and purely</span></span><br><span class="line"><span class="comment"> * initializes variables that couldn&#x27;t be statically initialized.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * This only exists for built-in code, not for modules.</span></span><br><span class="line"><span class="comment"> * Keep main.c:initcall_level_names[] in sync.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> pure_initcall(fn)		__define_initcall(fn, 0)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall(fn)		__define_initcall(fn, 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall_sync(fn)		__define_initcall(fn, 1s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall(fn)		__define_initcall(fn, 2)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall_sync(fn)	__define_initcall(fn, 2s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> arch_initcall(fn)		__define_initcall(fn, 3)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> arch_initcall_sync(fn)		__define_initcall(fn, 3s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall(fn)		__define_initcall(fn, 4)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall_sync(fn)	__define_initcall(fn, 4s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall(fn)			__define_initcall(fn, 5)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall_sync(fn)		__define_initcall(fn, 5s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> rootfs_initcall(fn)		__define_initcall(fn, rootfs)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall(fn)		__define_initcall(fn, 6)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall_sync(fn)	__define_initcall(fn, 6s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall(fn)		__define_initcall(fn, 7)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall_sync(fn)		__define_initcall(fn, 7s)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __initcall(fn) device_initcall(fn)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __exitcall(fn)						\</span></span><br><span class="line"><span class="meta">	static exitcall_t __exitcall_##fn __exit_call = fn</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> console_initcall(fn)	___define_initcall(fn, con, .con_initcall)</span></span><br></pre></td></tr></table></figure>
+
+<p>通过注释我们可以看到，这些<code>initcall</code>都是被用于<code>built-in</code>的驱动的，作为<code>ko</code>模块编译的驱动的<code>initcall</code>我们将稍后讨论。</p>
+<p>这里注意到有些<code>initcall</code>后面带了<code>sync</code>的后缀，优先级方便也是有了<code>s</code>的后缀，<strong>带s的要比不带s的优先级要低</strong>。</p>
+<p>这里<code>sync</code>的意思是，某些模块必须等另一个模块初始化完才能工作，那就需要用<code>*_sync()</code>，让它们<strong>顺序执行，防止 race 条件或访问未初始化的数据</strong>。</p>
+<h2 id="built-in-initcall"><a href="#built-in-initcall" class="headerlink" title="built-in initcall"></a>built-in initcall</h2><p>这些<code>initcall</code>只能在内核构建的时候一起编译进入内核，不能作为单独模块编译加载。</p>
+<h3 id="优先级和使用场景"><a href="#优先级和使用场景" class="headerlink" title="优先级和使用场景"></a>优先级和使用场景</h3><p>作为<code>built-in</code>的<code>initcall</code>,下面是他们的优先级和使用场景：</p>
+<table>
+<thead>
+<tr>
+<th>等级宏名</th>
+<th>优先级</th>
+<th>用于初始化什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>early_initcall()</code></td>
+<td>-1</td>
+<td>非常早的初始化，在 SMP 启动前，只用于核心代码</td>
+</tr>
+<tr>
+<td><code>pure_initcall()</code></td>
+<td>0</td>
+<td>仅初始化一些全局变量，用于非常“纯”的代码</td>
+</tr>
+<tr>
+<td><code>core_initcall()</code></td>
+<td>1</td>
+<td>内核核心子系统，比如内存管理、调度器等</td>
+</tr>
+<tr>
+<td><code>postcore_initcall()</code></td>
+<td>2</td>
+<td>核心子系统之后，比如 console、boot param 等</td>
+</tr>
+<tr>
+<td><code>arch_initcall()</code></td>
+<td>3</td>
+<td>特定架构（x86、arm 等）相关初始化</td>
+</tr>
+<tr>
+<td><code>subsys_initcall()</code></td>
+<td>4</td>
+<td>各种内核子系统，如 i2c、spi、mmc 等</td>
+</tr>
+<tr>
+<td><code>fs_initcall()</code></td>
+<td>5</td>
+<td>文件系统，如 ext4、vfat 等初始化</td>
+</tr>
+<tr>
+<td><code>rootfs_initcall()</code></td>
+<td>-</td>
+<td>特别用于挂载 rootfs 的钩子</td>
+</tr>
+<tr>
+<td><code>device_initcall()</code></td>
+<td>6</td>
+<td>设备驱动，比如 platform_driver_register 等</td>
+</tr>
+<tr>
+<td><code>late_initcall()</code></td>
+<td>7</td>
+<td>最后阶段的初始化，比如 deferred probe 等</td>
+</tr>
+</tbody></table>
+<p>其中需要特别说明的是<code>rootfs_initcall</code>，他的作用是初始化 <code>rootfs</code> 和挂载根文件系统，常用场景：内建<code>initramfs</code> 、解压 <code>cpio</code>、挂载 <code>/init</code>。</p>
+<p>这个阶段主要用于 <strong>内建的 RAMFS&#x2F;Initramfs 文件系统的解压和挂载</strong>，</p>
+<p>有时候也用于设置默认 <code>root device</code>（比如挂载 <code>root=/dev/mmcblk0p1</code>）</p>
+<h3 id="宏展开"><a href="#宏展开" class="headerlink" title="宏展开"></a>宏展开</h3><p>我们来随机挑选一个宏进行展开，就用<code>device_initcall</code>：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/* Format: &lt;modname&gt;__&lt;counter&gt;_&lt;line&gt;_&lt;fn&gt; */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __initcall_id(fn)					\</span></span><br><span class="line"><span class="meta">	__PASTE(__KBUILD_MODNAME,				\</span></span><br><span class="line"><span class="meta">	__PASTE(__,						\</span></span><br><span class="line"><span class="meta">	__PASTE(__COUNTER__,					\</span></span><br><span class="line"><span class="meta">	__PASTE(_,						\</span></span><br><span class="line"><span class="meta">	__PASTE(__LINE__,					\</span></span><br><span class="line"><span class="meta">	__PASTE(_, fn))))))</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Format: __&lt;prefix&gt;__&lt;iid&gt;&lt;id&gt; */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __initcall_name(prefix, __iid, id)			\</span></span><br><span class="line"><span class="meta">	__PASTE(__,						\</span></span><br><span class="line"><span class="meta">	__PASTE(prefix,						\</span></span><br><span class="line"><span class="meta">	__PASTE(__,						\</span></span><br><span class="line"><span class="meta">	__PASTE(__iid, id))))</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __initcall_section(__sec, __iid)			\</span></span><br><span class="line"><span class="meta">	#__sec <span class="string">&quot;.init&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ____define_initcall(fn, __unused, __name, __sec)	\</span></span><br><span class="line"><span class="meta">	static initcall_t __name __used 			\</span></span><br><span class="line"><span class="meta">		__attribute__((__section__(__sec))) = fn;</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __unique_initcall(fn, id, __sec, __iid)			\</span></span><br><span class="line"><span class="meta">	____define_initcall(fn,					\</span></span><br><span class="line"><span class="meta">		__initcall_stub(fn, __iid, id),			\</span></span><br><span class="line"><span class="meta">		__initcall_name(initcall, __iid, id),		\</span></span><br><span class="line"><span class="meta">		__initcall_section(__sec, __iid))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> ___define_initcall(fn, id, __sec)			\</span></span><br><span class="line"><span class="meta">	__unique_initcall(fn, id, __sec, __initcall_id(fn))</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __define_initcall(fn, id) ___define_initcall(fn, id, .initcall##id)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall(fn)		__define_initcall(fn, 6)</span></span><br></pre></td></tr></table></figure>
+
+<p>其中，我们假设:</p>
+<ul>
+<li>fn &#x3D; my_init</li>
+<li>__KBUILD_MODNAME &#x3D; mydriver （模块名）</li>
+<li>_<em>COUNTER</em>_ &#x3D; 0</li>
+<li>_<em>LINE</em>_ &#x3D; 0</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">device_initcall(my_init)</span><br><span class="line">	→ __define_initcall(my_init, <span class="number">6</span>)</span><br><span class="line">		→ ___define_initcall(my_init, <span class="number">6</span>, .initcall6)</span><br><span class="line">			→ __unique_initcall(my_init, <span class="number">6</span>, .initcall6, __initcall_id(my_init))</span><br><span class="line">                → ____define_initcall(</span><br><span class="line">                       my_init,</span><br><span class="line">                       __initcall_stub(my_init, mydriver__0_123_my_init, <span class="number">6</span>),</span><br><span class="line">                       __initcall_name(initcall, mydriver__0_123_my_init, <span class="number">6</span>),</span><br><span class="line">                       __initcall_section(.initcall6, mydriver__0_123_my_init)</span><br><span class="line">                   )</span><br><span class="line">					→ <span class="type">static</span> <span class="type">initcall_t</span> __initcall_initcall__mydriver__0_123_my_init6 __used</span><br><span class="line">   						__attribute__((__section__(<span class="string">&quot;.initcall6.init&quot;</span>))) = my_init;</span><br></pre></td></tr></table></figure>
+
+<p>其中，<code>initcall_t</code>的定义如下，也就是一个返回值为<code>int</code>，参数为<code>void</code>的函数指针：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="title function_">int</span> <span class="params">(*<span class="type">initcall_t</span>)</span><span class="params">(<span class="type">void</span>)</span>;</span><br></pre></td></tr></table></figure>
+
+<p><strong>__initcall_initcall__mydriver__0_123_my_init6</strong>则为这个变量的名字。</p>
+<p><strong>__used</strong>的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> __used __attribute__((__used__))</span></span><br></pre></td></tr></table></figure>
+
+<p>因为这个变量不会被直接使用（如何使用下面讨论），为了防止编译器优化则使用该关键字。</p>
+<p><code>__attribute__((__section__(&quot;.initcall6.init&quot;)))</code>则是将该变量放入.initcall6.init段中。</p>
+<h3 id="linux去哪里调用这些initcall"><a href="#linux去哪里调用这些initcall" class="headerlink" title="linux去哪里调用这些initcall"></a>linux去哪里调用这些initcall</h3><p>前面说到通过<code>xxx_init</code>宏的函数，会被放到某一个段中，那么<code>linux</code>如何调用这个函数呢？</p>
+<p>这些函数会在<code>do_initcalls</code>函数中被调用，完整过程：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">start_kernel()</span><br><span class="line"> └── rest_init()</span><br><span class="line">      └── kernel_init()</span><br><span class="line">           └── do_basic_setup()</span><br><span class="line">                └── do_initcalls()   ←🔹 关键函数</span><br></pre></td></tr></table></figure>
+
+<p><code>do_initcalls</code>的关键代码如下：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">static initcall_entry_t *initcall_levels[] __initdata = &#123;</span><br><span class="line">	__initcall0_start,</span><br><span class="line">	__initcall1_start,</span><br><span class="line">	__initcall2_start,</span><br><span class="line">	__initcall3_start,</span><br><span class="line">	__initcall4_start,</span><br><span class="line">	__initcall5_start,</span><br><span class="line">	__initcall6_start,</span><br><span class="line">	__initcall7_start,</span><br><span class="line">	__initcall_end,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static void __init do_initcalls(void)</span><br><span class="line">&#123;</span><br><span class="line">	int level;</span><br><span class="line">	</span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (level = 0; level &lt; ARRAY_SIZE(initcall_levels) - 1; level++) &#123;</span><br><span class="line">		...</span><br><span class="line">		do_initcall_level(level, command_line);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中，<code>initcall_levels</code>保存着每一个<code>initcall</code>段的开始地址。</p>
+<p><code>do_initcall_level</code>的关键代码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> __init <span class="title function_">do_initcall_level</span><span class="params">(<span class="type">int</span> level, <span class="type">char</span> *command_line)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">initcall_entry_t</span> *fn;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	trace_initcall_level(initcall_level_names[level]);</span><br><span class="line">	<span class="keyword">for</span> (fn = initcall_levels[level]; fn &lt; initcall_levels[level+<span class="number">1</span>]; fn++)</span><br><span class="line">		do_one_initcall(initcall_from_entry(fn));</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><code>trace</code>开头的函数是用于调试的，可以忽略。</p>
+<p>这里就是遍历某一个<code>initcall</code>的段，开始地址是<code>initcall_levels[level]</code>,结束地址是<code>initcall_levels[level + 1]</code>也就是下一个段的地址。</p>
+<p>这样就可以拿到该段中的每一个<code>init</code>函数地址了，最后通过<code>do_one_initcall</code>函数执行。</p>
+<p><code>do_one_initcall</code>关键代码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="type">int</span> __init_or_module <span class="title function_">do_one_initcall</span><span class="params">(<span class="type">initcall_t</span> fn)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">        </span><br><span class="line">	do_trace_initcall_start(fn);</span><br><span class="line">	ret = fn();</span><br><span class="line">	do_trace_initcall_finish(fn, ret);</span><br><span class="line">	</span><br><span class="line">    ...</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="作为模块加载的initcall"><a href="#作为模块加载的initcall" class="headerlink" title="作为模块加载的initcall"></a>作为模块加载的initcall</h2><p>作为模块加载所使用的initcall略有不同。</p>
+<p>定义如下:</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> __initcall(fn) device_initcall(fn)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> MODULE</span></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * module_init() - driver initialization entry point</span></span><br><span class="line"><span class="comment"> * @x: function to be run at kernel boot time or module insertion</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * module_init() will either be called during do_initcalls() (if</span></span><br><span class="line"><span class="comment"> * builtin) or at module insertion time (if a module).  There can only</span></span><br><span class="line"><span class="comment"> * be one per module.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> module_init(x)	__initcall(x);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * module_exit() - driver exit entry point</span></span><br><span class="line"><span class="comment"> * @x: function to be run when driver is removed</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * module_exit() will wrap the driver clean-up code</span></span><br><span class="line"><span class="comment"> * with cleanup_module() when used with rmmod when</span></span><br><span class="line"><span class="comment"> * the driver is a module.  If the driver is statically</span></span><br><span class="line"><span class="comment"> * compiled into the kernel, module_exit() has no effect.</span></span><br><span class="line"><span class="comment"> * There can only be one per module.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> module_exit(x)	__exitcall(x);</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">else</span> <span class="comment">/* MODULE */</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * In most cases loadable modules do not need custom</span></span><br><span class="line"><span class="comment"> * initcall levels. There are still some valid cases where</span></span><br><span class="line"><span class="comment"> * a driver may be needed early if built in, and does not</span></span><br><span class="line"><span class="comment"> * matter when built as a loadable module. Like bus</span></span><br><span class="line"><span class="comment"> * snooping debug drivers.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> early_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall_sync(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall_sync(fn)	module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> arch_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall_sync(fn)	module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall(fn)			module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall_sync(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> rootfs_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall_sync(fn)	module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall(fn)		module_init(fn)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall_sync(fn)		module_init(fn)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> console_initcall(fn)		module_init(fn)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Each module must use one module_init(). */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> module_init(initfn)					\</span></span><br><span class="line"><span class="meta">	static inline initcall_t __maybe_unused __inittest(void)		\</span></span><br><span class="line"><span class="meta">	&#123; return initfn; &#125;					\</span></span><br><span class="line"><span class="meta">	int init_module(void) __copy(initfn)			\</span></span><br><span class="line"><span class="meta">		__attribute__((alias(#initfn)));		\</span></span><br><span class="line"><span class="meta">	___ADDRESSABLE(init_module, __initdata);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* This is only required if you want to be unloadable. */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> module_exit(exitfn)					\</span></span><br><span class="line"><span class="meta">	static inline exitcall_t __maybe_unused __exittest(void)		\</span></span><br><span class="line"><span class="meta">	&#123; return exitfn; &#125;					\</span></span><br><span class="line"><span class="meta">	void cleanup_module(void) __copy(exitfn)		\</span></span><br><span class="line"><span class="meta">		__attribute__((alias(#exitfn)));		\</span></span><br><span class="line"><span class="meta">	___ADDRESSABLE(cleanup_module, __exitdata);</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<p>可以看到，如果<code>MODULE</code>宏被定义了，则<code>module_init</code>被定义成<code>__initcall</code>，<code>__initcall</code>最后又被定义为了<code>device_initcall</code>，走的还是<code>built-in initcall</code>那一套。如果<code>MODULE</code>没被定义，就将所有的<code>initcall</code>都换为<code>module_init</code>，以免驱动的错误编译，此时<code>module_init</code>就是代码重定位那一套了，这个后面有时间再说。</p>
+<p>那么<code>MODULE</code>这个宏又是什么时候被设置的呢？肯定不能静态设置，如果静态设置了，那么<code>built-in</code>和<code>ko</code>只能选择一个，很显然太纯了。</p>
+<p>其实这个宏的定义和你的驱动是否作为模块 <code>.ko</code> 编译有关，由内核的构建系统 <code>Kbuild</code> 决定。</p>
+<p>如果你写的是模块:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">obj-m += xxx.o</span><br></pre></td></tr></table></figure>
+
+<p>那么<code>Kbuild</code> 会在编译 <code>.ko</code> 模块时自动添加一个编译宏定义：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">-DMODULE</span><br></pre></td></tr></table></figure>
+
+<p>可以在<code>make</code>模块的时候加一个<code>V=1</code>，看看是否会被附加一个<code>-DMODULE</code>的<code>CFLAGS</code>，大概是这样：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">gcc -Wp,-MD,drivers/my_driver/.my_driver.o.d  -DMODULE ...</span><br></pre></td></tr></table></figure>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org">Troy Mitchell</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org/2025/04/12/linux%E7%9A%84initcall%E6%9C%BA%E5%88%B6/">https://blog.troy-y.org/2025/04/12/linux的initcall机制/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.troy-y.org" target="_blank">Troy's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/linux/">linux</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/133468432?v=4" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>Buy me a coffee</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wxzsm.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wxzsm.jpg"/></a><div class="post-qr-code-desc"></div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/04/10/vercel%E9%83%A8%E7%BD%B2twikoo%E5%90%8E%E8%AF%84%E8%AE%BA%E6%94%B6%E4%B8%8D%E5%88%B0%E9%80%9A%E7%9F%A5%E9%82%AE%E4%BB%B6%E9%97%AE%E9%A2%98%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/" title="vercel部署twikoo后评论收不到通知邮件问题解决方法"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">vercel部署twikoo后评论收不到通知邮件问题解决方法</div></div><div class="info-2"><div class="info-item-1">Refhttps://blog.csdn.net/weixin_43931358/article/details/108627559 </div></div></div></a><a class="pagination-related" href="/2025/04/13/linux-i2c%E9%A9%B1%E5%8A%A8%E6%A1%86%E6%9E%B6%E5%88%86%E6%9E%90-0/" title="linux i2c驱动框架分析[0]"><img class="cover" src="https://i.postimg.cc/PxKXdfy3/2011071000553274.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">linux i2c驱动框架分析[0]</div></div><div class="info-2"><div class="info-item-1">系列: linux i2c驱动框架分析[0]linux...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2024/08/12/Linux%E6%9C%8D%E5%8A%A1%E5%99%A8%E6%90%AD%E5%BB%BAnfs%E6%9C%8D%E5%8A%A1/" title="Linux服务器搭建nfs服务(转)"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-12</div><div class="info-item-2">Linux服务器搭建nfs服务(转)</div></div><div class="info-2"><div class="info-item-1">https://juejin.cn/post/6868085817987268616 </div></div></div></a><a class="pagination-related" href="/2024/08/12/Linux%E6%9C%8D%E5%8A%A1%E5%99%A8%E9%85%8D%E7%BD%AEssh%E5%AF%86%E9%92%A5%E7%99%BB%E5%BD%95/" title="Linux服务器配置ssh密钥登录"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-12</div><div class="info-item-2">Linux服务器配置ssh密钥登录</div></div><div class="info-2"><div class="info-item-1">What server doessudo vim /etc/ssh/sshd_config  打开如下选项： PubkeyAuthentication yes  使用如下命令生成密钥： ssh-keygencd .sshcat id_rsa.pub &gt;&gt; authorized_keys  重启sshd服务： sudo systemctl restart ssh  What client does复制.ssh目录下的id_rsa文件到~/.ssh目录下并重命名一个名字。 chmod 600 ./&lt;your id_rsa name&gt;   编辑hostname vim ~/.ssh/config  将以下内容添加进入： Host &lt;your server name&gt;HostName &lt;your server IP&gt;TCPKeepAlive yesServerAliveInterval 15User &lt;your user name of server&gt;IdentityFile &lt;your id_rsa file...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[0]-理解dtb格式</div></div><div class="info-2"><div class="info-item-1">Linux设备树[0]-理解dtb格式  DTBdtb文件由dts通过dtc命令编译而来。 具体结构应该如下：  alignment gap对齐中间的alignment gap部分表示对齐间隙，它并非是必须的，它是否被提供以及大小由具体的平台对数据对齐和的要求以及数据是否已经对齐来决定。 elf headerDTB文件跟elf文件一样，都有一个header，也就是meta-data。dtb文件的meta-data大小为40字节。 可以看下linux代码中对于dtb头信息的定义： // In scripts/dtc/libfdt/fdt.hstruct fdt_header &#123;	fdt32_t magic;			 /* magic word FDT_MAGIC */	fdt32_t totalsize;		 /* total size of DT block */	fdt32_t off_dt_struct;		 /* offset to structure */	fdt32_t off_dt_strings;		 /* offset to strings...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[1]-解析设备树</div></div><div class="info-2"><div class="info-item-1">Uboot如何将设备树传给kernel在riscv架构下，uboot会将dtb的物理地址放到a1寄存器中。 这点可在arch/riscv/head.S中看到些许端倪。 #ifdef CONFIG_BUILTIN_DTB	la a0, __dtb_start	XIP_FIXUP_OFFSET a0#else	mv a0, a1#endif /* CONFIG_BUILTIN_DTB */	/* Set trap vector to spin forever to help debug */	la a3, .Lsecondary_park	csrw CSR_TVEC, a3	call...</div></div></div></a><a class="pagination-related" href="/2024/08/22/OpenHarmony-on-rk3568%E4%BD%BF%E8%83%BDcan/" title="OpenHarmony on rk3568使能can"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-22</div><div class="info-item-2">OpenHarmony on rk3568使能can</div></div><div class="info-2"><div class="info-item-1">EnvOH: v3.2.3chip: rk3568 Content首先查看源码中是否具有CAN_ROCKCHIP选项： ❯ find -name &quot;Kconfig&quot; -exec grep -n &quot;CAN_ROCKCHIP&quot; &#123;&#125; +❯...</div></div></div></a><a class="pagination-related" href="/2024/08/23/Rockchip-%E7%B3%BB%E5%88%97%E8%8A%AF%E7%89%87uboot-distro-cmd/" title="rk3568 uboot distro_cmd"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-23</div><div class="info-item-2">rk3568 uboot distro_cmd</div></div><div class="info-2"><div class="info-item-1">bootcmd在uboot的shell中使用printenv命令可以看到bootcmd的字符串： =&gt; printenv bootcmdbootcmd=boot_android $&#123;devtype&#125; $&#123;devnum&#125;;boot_fit;bootrkp;run distro_bootcmd;  命令解析：    - boot_android: 查找并尝试启动安卓镜像。    - boot_fix: 查找并尝试启动fit格式镜像。    - bootrkp: 查找并尝试启动rk分区镜像。    - run distro_bootcmd: 这就是这篇文章的主角了，distro_bootcmd可以根据不同介质去启动kernel内核，比如kernel可以在sd卡，emmc上，都可以顺利启动。 以上提到的bootcmd可以在include/configs/rockchip-common.h中看到相关定义： #if defined(CONFIG_AVB_VBMETA_PUBLIC_KEY_VALIDATE)#define...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Troy Mitchell</div><div class="author-info-description">对弈平凡</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/troymitchell911"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="mailto:troymitchell988@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://troy-y.org" target="_blank" title="Me"><i class="fas fa-user" style="color: #6c5ce7;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Words can't describe me</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFinitcall"><span class="toc-number">1.</span> <span class="toc-text">什么是initcall</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#initcall%E7%9A%84%E7%A7%8D%E7%B1%BB"><span class="toc-number">2.</span> <span class="toc-text">initcall的种类</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#built-in-initcall"><span class="toc-number">3.</span> <span class="toc-text">built-in initcall</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BC%98%E5%85%88%E7%BA%A7%E5%92%8C%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">3.1.</span> <span class="toc-text">优先级和使用场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%8F%E5%B1%95%E5%BC%80"><span class="toc-number">3.2.</span> <span class="toc-text">宏展开</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#linux%E5%8E%BB%E5%93%AA%E9%87%8C%E8%B0%83%E7%94%A8%E8%BF%99%E4%BA%9Binitcall"><span class="toc-number">3.3.</span> <span class="toc-text">linux去哪里调用这些initcall</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%9C%E4%B8%BA%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E7%9A%84initcall"><span class="toc-number">4.</span> <span class="toc-text">作为模块加载的initcall</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树">Linux设备树[1]-解析设备树</a><time datetime="2025-04-26T11:23:36.000Z" title="发表于 2025-04-26 19:23:36">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux">Uboot如何传递bootargs给Linux</a><time datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式">Linux设备树[0]-理解dtb格式</a><time datetime="2025-04-26T07:34:45.000Z" title="发表于 2025-04-26 15:34:45">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/" title="嵌入式Linux面经-随意随缘不完整版">嵌入式Linux面经-随意随缘不完整版</a><time datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]">platform device driver[1]</a><time datetime="2025-04-20T13:05:15.000Z" title="发表于 2025-04-20 21:05:15">2025-04-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2024 - 2025 By Troy Mitchell</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.2.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.5</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><script src="https://fastly.jsdelivr.net/gh/sviptzk/HexoStaticFile@latest/Hexo/js/mouse_snow.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>

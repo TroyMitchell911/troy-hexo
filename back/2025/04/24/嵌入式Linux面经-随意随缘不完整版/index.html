@@ -1,0 +1,767 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>嵌入式Linux面经-随意随缘不完整版 | Troy's blog</title><meta name="author" content="Troy Mitchell"><meta name="copyright" content="Troy Mitchell"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="🌐 一、内核基础（驱动和 BSP 的地基）Linux 内核启动流程？（从 U-Boot &#x2F; ATF 到 init）系统上电后，SoC 会从固化的启动介质（如 SPI NOR&#x2F;NAND）加载第一阶段 Bootloader，通常是 SPL（Secondary Program Loader），接着加载第二阶段的 U-Boot。 在 U-Boot 中主要做这些事：  初始化 DRAM">
+<meta property="og:type" content="article">
+<meta property="og:title" content="嵌入式Linux面经-随意随缘不完整版">
+<meta property="og:url" content="https://blog.troy-y.org/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/index.html">
+<meta property="og:site_name" content="Troy&#39;s blog">
+<meta property="og:description" content="🌐 一、内核基础（驱动和 BSP 的地基）Linux 内核启动流程？（从 U-Boot &#x2F; ATF 到 init）系统上电后，SoC 会从固化的启动介质（如 SPI NOR&#x2F;NAND）加载第一阶段 Bootloader，通常是 SPL（Secondary Program Loader），接着加载第二阶段的 U-Boot。 在 U-Boot 中主要做这些事：  初始化 DRAM">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/133468432?v=4">
+<meta property="article:published_time" content="2025-04-24T02:56:32.000Z">
+<meta property="article:modified_time" content="2025-04-28T15:26:59.603Z">
+<meta property="article:author" content="Troy Mitchell">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="kernel">
+<meta property="article:tag" content="job">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/133468432?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "嵌入式Linux面经-随意随缘不完整版",
+  "url": "https://blog.troy-y.org/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/",
+  "image": "https://avatars.githubusercontent.com/u/133468432?v=4",
+  "datePublished": "2025-04-24T02:56:32.000Z",
+  "dateModified": "2025-04-28T15:26:59.603Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Troy Mitchell",
+      "url": "https://blog.troy-y.org/"
+    }
+  ]
+}</script><link rel="shortcut icon" href="https://avatars.githubusercontent.com/u/133468432?v=4"><link rel="canonical" href="https://blog.troy-y.org/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        if (!ttl) return
+        const expiry = Date.now() + ttl * 86400000
+        localStorage.setItem(key, JSON.stringify({ value, expiry }))
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return undefined
+        const { value, expiry } = JSON.parse(itemStr)
+        if (Date.now() > expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return value
+      }
+    }
+
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => new Promise((resolve, reject) => {
+        const script = document.createElement('script')
+        script.src = url
+        script.async = true
+        Object.entries(attr).forEach(([key, val]) => script.setAttribute(key, val))
+        script.onload = script.onreadystatechange = () => {
+          if (!script.readyState || /loaded|complete/.test(script.readyState)) resolve()
+        }
+        script.onerror = reject
+        document.head.appendChild(script)
+      }),
+      getCSS: (url, id) => new Promise((resolve, reject) => {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = url
+        if (id) link.id = id
+        link.onload = link.onreadystatechange = () => {
+          if (!link.readyState || /loaded|complete/.test(link.readyState)) resolve()
+        }
+        link.onerror = reject
+        document.head.appendChild(link)
+      }),
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const activateDarkMode = () => {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          const mediaQueryDark = window.matchMedia('(prefers-color-scheme: dark)')
+          const mediaQueryLight = window.matchMedia('(prefers-color-scheme: light)')
+
+          if (theme === undefined) {
+            if (mediaQueryLight.matches) activateLightMode()
+            else if (mediaQueryDark.matches) activateDarkMode()
+            else {
+              const hour = new Date().getHours()
+              const isNight = hour <= 8 || hour >= 19
+              isNight ? activateDarkMode() : activateLightMode()
+            }
+            mediaQueryDark.addEventListener('change', () => {
+              if (saveToLocal.get('theme') === undefined) {
+                e.matches ? activateDarkMode() : activateLightMode()
+              }
+            })
+          } else {
+            theme === 'light' ? activateLightMode() : activateDarkMode()
+          }
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.xml","preload":true,"top_n_per_article":1,"unescape":false,"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":true,"highlightMacStyle":true},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '天',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: true,
+  },
+  autoDarkmode: true
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: '嵌入式Linux面经-随意随缘不完整版',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><meta name="generator" content="Hexo 7.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/top_img.jpg);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Troy's blog</span></a><a class="nav-page-title" href="/"><span class="site-name">嵌入式Linux面经-随意随缘不完整版</span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 主页</span></a></div><div class="menus_item"><span class="site-page group"><i class="fa-fw fa fa-graduation-cap"></i><span> 博文</span><i class="fas fa-chevron-down"></i></span><ul class="menus_item_child"><li><a class="site-page child" href="/categories/"><i class="fa-fw fa fa-archive"></i><span> 分类</span></a></li><li><a class="site-page child" href="/tags/"><i class="fa-fw fa fa-tags"></i><span> 标签</span></a></li><li><a class="site-page child" href="/archives/"><i class="fa-fw fa fa-folder-open"></i><span> 归档</span></a></li></ul></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> 关于笔者</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">嵌入式Linux面经-随意随缘不完整版</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2025-04-28T15:26:59.603Z" title="更新于 2025-04-28 23:26:59">2025-04-28</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">7.3k</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>24分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><h1 id="🌐-一、内核基础（驱动和-BSP-的地基）"><a href="#🌐-一、内核基础（驱动和-BSP-的地基）" class="headerlink" title="🌐 一、内核基础（驱动和 BSP 的地基）"></a>🌐 一、内核基础（驱动和 BSP 的地基）</h1><h2 id="Linux-内核启动流程？（从-U-Boot-ATF-到-init）"><a href="#Linux-内核启动流程？（从-U-Boot-ATF-到-init）" class="headerlink" title="Linux 内核启动流程？（从 U-Boot &#x2F; ATF 到 init）"></a>Linux 内核启动流程？（从 U-Boot &#x2F; ATF 到 init）</h2><p>系统上电后，SoC 会从固化的启动介质（如 SPI NOR&#x2F;NAND）加载第一阶段 Bootloader，通常是 SPL（Secondary Program Loader），接着加载第二阶段的 U-Boot。</p>
+<p>在 U-Boot 中主要做这些事：</p>
+<ul>
+<li>初始化 DRAM，准备运行内核的内存环境</li>
+<li>初始化串口、网络、存储等基本外设（可选）</li>
+<li>读取设备树（.dtb）、kernel 镜像（zImage&#x2F;Image）、initrd</li>
+<li>最后调用 <code>bootm</code> 或 <code>booti</code> 命令，引导内核</li>
+</ul>
+<h3 id="可选阶段：ATF（Arm-Trusted-Firmware）或-OpenSBI（RISC-V）"><a href="#可选阶段：ATF（Arm-Trusted-Firmware）或-OpenSBI（RISC-V）" class="headerlink" title="可选阶段：ATF（Arm Trusted Firmware）或 OpenSBI（RISC-V）"></a>可选阶段：ATF（Arm Trusted Firmware）或 OpenSBI（RISC-V）</h3><p>如果是 RISC-V 架构，这一步通常由 <strong>OpenSBI</strong> 负责：</p>
+<ul>
+<li>设置机器模式下的一些 CSR、trap handler</li>
+<li>创建 S-mode 的运行环境（包括 timer 中断、console、PMP）</li>
+<li>提供 SBI 接口（给 S-mode 的 Linux 用）</li>
+</ul>
+<p>OpenSBI 初始化完毕后，跳转到 Linux 内核的 <code>start_kernel()</code>。</p>
+<h3 id="简略版本"><a href="#简略版本" class="headerlink" title="简略版本"></a>简略版本</h3><div class="note info flat"><p>Linux 的启动流程可以分为三大阶段：Bootloader、内核、用户空间。上电后 U-Boot 加载 kernel 和 dtb，如果是 RISC-V，还会通过 OpenSBI 设置 S-mode 环境，最后跳转到内核的 start_kernel 函数。内核初始化内存、子系统、挂载 rootfs，然后启动第一个用户态程序 <code>/sbin/init</code>。这整个流程我在适配某个 RK3588 平台时调过很多次，比如串口出不来我就调 console 初始化、MMC 识别不了我就看设备树和 U-Boot 的 log。</p>
+</div>
+
+<h2 id="设备树是什么？它的作用？你怎么写-改过？"><a href="#设备树是什么？它的作用？你怎么写-改过？" class="headerlink" title="设备树是什么？它的作用？你怎么写&#x2F;改过？"></a>设备树是什么？它的作用？你怎么写&#x2F;改过？</h2><p>设备树就是内核用来描述硬件结构的数据结构，是 Linux 移植过程中很关键的一部分。我写过&#x2F;改过很多设备树，比如在适配 RK3588 的时候，我给 LED 加了 GPIO-led 节点，调过串口波特率、4G 控制引脚，解决过设备不能识别、设备树 <code>compatible</code> 不匹配驱动等问题。</p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>修改内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>4G 模块适配</td>
+<td>加了 UART 节点、AT 控制用 GPIO、PWRKEY 控制</td>
+</tr>
+<tr>
+<td>LED 灯适配</td>
+<td>加了 GPIO-led 节点，测试开关状态</td>
+</tr>
+<tr>
+<td>RS-232</td>
+<td>开启对应 UART 节点，添加正确引脚复用</td>
+</tr>
+</tbody></table>
+<h2 id="什么是-platform-device-和-platform-driver？怎么匹配？"><a href="#什么是-platform-device-和-platform-driver？怎么匹配？" class="headerlink" title="什么是 platform_device 和 platform_driver？怎么匹配？"></a>什么是 platform_device 和 platform_driver？怎么匹配？</h2><p>​	这是 Linux 设备模型中用于描述“<strong>非自动枚举外设</strong>”（比如 GPIO 控制器、LED、SPI、I2C 设备等）的核心机制。</p>
+<ul>
+<li><code>platform_device</code>：描述一个平台设备，<strong>包含设备的资源信息</strong>（内存地址、中断号、时钟等）</li>
+<li><code>platform_driver</code>：驱动这个设备的驱动程序，实现 <code>probe/remove</code> 等回调</li>
+</ul>
+<p>每个设备或驱动都会挂到一条总线上，platform_device&#x2F;driver是挂到了虚拟的platform_bus上，当有驱动模块插入或者设备创建的时候，就会去调用bus-&gt;match，如果匹配就会调用到probe。</p>
+<h2 id="中断处理流程（从硬件中断到-ISR）"><a href="#中断处理流程（从硬件中断到-ISR）" class="headerlink" title="中断处理流程（从硬件中断到 ISR）"></a>中断处理流程（从硬件中断到 ISR）</h2><ul>
+<li>中断产生</li>
+<li>响应中断<ul>
+<li>保存当前上下文</li>
+<li>调转到中断入口（中断向亮表）</li>
+<li>进入trap流程，riscv是stvec</li>
+</ul>
+</li>
+<li>GIC&#x2F;PLIC识别中断来源</li>
+<li>linux调用handle_irq</li>
+<li>最终调用驱动注册的irq</li>
+</ul>
+<h2 id="内核空间和用户空间的通信方式？（ioctl、procfs、sysfs、netlink）"><a href="#内核空间和用户空间的通信方式？（ioctl、procfs、sysfs、netlink）" class="headerlink" title="内核空间和用户空间的通信方式？（ioctl、procfs、sysfs、netlink）"></a>内核空间和用户空间的通信方式？（ioctl、procfs、sysfs、netlink）</h2><p>内核和用户通信方式很多，最常用的是 <code>ioctl</code>，适合复杂控制命令；如果是属性类信息，比如设备模式、开关等，可以用 <code>sysfs</code>；调试或状态类信息用 <code>procfs</code>；而更复杂的场景，比如异步事件、结构体交换等，则会用 <code>netlink</code>。我在做外设驱动时可能会ioctl 去debug，值的一提的是platform框架就提供了sysfs来修改probe相关内容。</p>
+<h2 id="Linux-的内存管理机制简要说一下？"><a href="#Linux-的内存管理机制简要说一下？" class="headerlink" title="Linux 的内存管理机制简要说一下？"></a>Linux 的内存管理机制简要说一下？</h2><ul>
+<li>每个进程都有独立的虚拟空间</li>
+<li>页表管理<ul>
+<li>支持多级页表，例如4级，支持huge page</li>
+<li>硬件通过MMU转换，缺页触发page fault</li>
+</ul>
+</li>
+<li>内存分配，kmalloc小块，vmalloc大块</li>
+<li>页面回收<ul>
+<li>清理cold页面</li>
+<li>dirty-page写回磁盘（swap）</li>
+</ul>
+</li>
+<li>slab&#x2F;slub分配器</li>
+<li>内存映射</li>
+</ul>
+<h2 id="slub-slab有什么区别"><a href="#slub-slab有什么区别" class="headerlink" title="slub &#x2F; slab有什么区别"></a>slub &#x2F; slab有什么区别</h2><p>slab: &#x2F;slæb&#x2F;</p>
+<p>slub: &#x2F;slʌb&#x2F;</p>
+<p><code>slab</code> &#x2F; <code>slub</code> 分配器是 Linux 内核中非常核心的一部分，用于高效地分配内存，尤其是 <strong>频繁申请&#x2F;释放的小对象</strong>。它们属于内核的“内存分配器”子系统，目标是比 <code>kmalloc()</code> 更快、更省碎片、更好对齐。</p>
+<blockquote>
+<p><strong>slab &#x2F; slub 分配器是 Linux 内核里专门用于“频繁分配释放的小内核对象”的内存池系统。</strong></p>
+</blockquote>
+<p>比如你在内核里频繁创建 &#x2F; 删除一个结构体，比如 <code>struct task_struct</code>，那 slab&#x2F;slub 会帮你更快、更安全地管理内存，不用每次都向物理页框要整块内存。</p>
+<p><strong>为啥不用</strong> <code>malloc()</code>？</p>
+<ul>
+<li>用户空间有 <code>malloc()</code>，但那是给用户程序的。</li>
+<li>内核不能用它，因为内核对性能和碎片容忍度要求极高。</li>
+<li>内核自己的通用分配器是 <code>kmalloc()</code>，但 <code>kmalloc()</code> 适合中等规模、一次性用途。</li>
+<li>对于<strong>大量重复、固定大小的小结构体</strong>，<code>slab/slub</code> 更快更稳。</li>
+</ul>
+<p><strong>slab&#x2F;slub&#x2F;slob 的关系（别搞混）</strong></p>
+<table>
+<thead>
+<tr>
+<th>分配器</th>
+<th>特点</th>
+<th>使用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>slab</td>
+<td>最早期，带缓存和局部性优化，复杂</td>
+<td>老系统，嵌入式也可能用</td>
+</tr>
+<tr>
+<td>slub</td>
+<td><strong>默认分配器（大多数内核默认）</strong>，简单高效</td>
+<td>推荐，支持 NUMA，锁粒度低</td>
+</tr>
+<tr>
+<td>slob</td>
+<td>超简陋、给资源极少的设备用（内存极少）</td>
+<td>小内核、嵌入式 minimal 环境</td>
+</tr>
+</tbody></table>
+<h2 id="你怎么看待设备驱动中的-probe-函数？调用流程是？"><a href="#你怎么看待设备驱动中的-probe-函数？调用流程是？" class="headerlink" title="你怎么看待设备驱动中的 probe 函数？调用流程是？"></a>你怎么看待设备驱动中的 probe 函数？调用流程是？</h2><ul>
+<li>name</li>
+<li>of_match_table</li>
+<li>acpi</li>
+</ul>
+<h2 id="什么是共享中断？"><a href="#什么是共享中断？" class="headerlink" title="什么是共享中断？"></a>什么是共享中断？</h2><p>共享中断（<strong>Shared IRQ</strong>）是指 <strong>多个设备共享同一个中断线（IRQ 号）</strong>。这种情况在中断线资源有限或板子设计简化时很常见，尤其是 <strong>x86 架构 PCI 设备</strong>、<strong>某些 ARM SoC 外设</strong> 中。</p>
+<p>在传统中断系统中，<strong>一个中断号通常只属于一个设备</strong>。</p>
+<p>而共享中断允许多个设备注册在同一个 IRQ 上，只要它们能自己判断中断来源即可。</p>
+<p>这样可以节省中断资源，提高硬件利用率。</p>
+<p>使用：</p>
+<ul>
+<li>request的时候带SHARED标志位</li>
+<li>dev_id必须唯一并且为非NULL</li>
+<li>irq_handler必须能判断是不是自己需要处理的中断（比如读状态寄存器）</li>
+</ul>
+<h2 id="ioremap和IOMMU"><a href="#ioremap和IOMMU" class="headerlink" title="ioremap和IOMMU"></a>ioremap和IOMMU</h2><p>ioremap是将io物理地址映射为虚拟地址的一种机制，让驱动中可以用虚拟地址来访问实际的物理IO寄存器。</p>
+<p>IOMMU是用来让设备访问内存的一种硬件+驱动的机制，帮助外设将虚拟地址翻译成物理地址。比如DMA控制器，网卡等。</p>
+<h2 id="内存管理子系统"><a href="#内存管理子系统" class="headerlink" title="内存管理子系统"></a>内存管理子系统</h2><p>内存管理子系统在 Linux 中负责管理物理内存和虚拟内存，确保内存的高效分配与回收。Linux 使用虚拟内存技术为每个进程提供独立的内存空间，并通过页表映射虚拟地址到物理地址。内核使用伙伴系统管理物理内存，通过 slab 分配器提高内存分配效率。在内存不足时，系统会通过页面交换（swap）将不常用的内存页写入硬盘，释放物理内存给其他进程。内存管理还包括内存保护和隔离，防止进程越界访问内存。同时，内核提供了内存监控和调优机制，如 <code>/proc/meminfo</code> 查看内存使用情况，和 <code>cgroups</code> 用于限制进程的内存使用。</p>
+<h3 id="作用"><a href="#作用" class="headerlink" title="作用"></a>作用</h3><p>内存管理子系统负责管理系统的所有内存资源，包括物理内存、虚拟内存、内存映射和内存保护等。其主要任务是高效地分配、使用和回收内存资源，并确保内存访问的安全性和稳定性。</p>
+<h3 id="虚拟内存与物理内存的区分"><a href="#虚拟内存与物理内存的区分" class="headerlink" title="虚拟内存与物理内存的区分"></a>虚拟内存与物理内存的区分</h3><ul>
+<li><p>虚拟内存：每个进程有独立的虚拟内存空间，通过分页技术，将虚拟地址映射到物理地址，虚拟地址提供了进程隔离和内存保护。</p>
+</li>
+<li><p>物理内存：实际的硬件ram，Linux会跟踪物理ram的使用情况，通过页面管理高效利用内存</p>
+</li>
+</ul>
+<h3 id="内存分配方式"><a href="#内存分配方式" class="headerlink" title="内存分配方式"></a>内存分配方式</h3><ul>
+<li>伙伴系统: 用于管理物理内存块，分配时按大小分配，释放时合并空闲块。</li>
+<li>slab分配器: 高效的内存分配机制，用于频繁分配和回收内存块，减少内存碎片。</li>
+<li>kmalloc，vmalloc: </li>
+<li>内核分配内存的两种方式，<code>kmalloc</code> 用于小块内存分配，<code>vmalloc</code> 用于较大的内存块。</li>
+</ul>
+<h3 id="页面交换与交换空间（Swap）"><a href="#页面交换与交换空间（Swap）" class="headerlink" title="页面交换与交换空间（Swap）"></a>页面交换与交换空间（Swap）</h3><p><strong>页面交换</strong>：当物理内存不足时，将不常用的内存页交换到硬盘的交换空间，释放物理内存给其他进程使用。</p>
+<p><strong>交换空间</strong>：通常是硬盘的一块区域，用于存储交换出去的内存页，可以是交换分区（swap partition）或交换文件（swap file）。</p>
+<h3 id="内存映射"><a href="#内存映射" class="headerlink" title="内存映射"></a>内存映射</h3><p><strong>mmap</strong>：通过 <code>mmap()</code> 系统调用将文件或设备映射到进程的虚拟内存地址空间，支持文件共享和内存映射。</p>
+<p><strong>内存映射文件</strong>：文件可以映射到进程的虚拟内存中，允许直接在内存中操作文件内容，避免重复的磁盘 I&#x2F;O 操作。</p>
+<h3 id="内存管理中的核心算法"><a href="#内存管理中的核心算法" class="headerlink" title="内存管理中的核心算法"></a>内存管理中的核心算法</h3><p><strong>页面置换算法</strong>：当内存不够用时，操作系统需要决定将哪些页面交换到硬盘，常用的算法有 LRU（最少使用）和 COW（写时复制）等。</p>
+<p><strong>内存压力管理</strong>：内存不足时，内核会采取措施，如杀死占用内存过多的进程，释放内存。</p>
+<h2 id="什么是伙伴系统"><a href="#什么是伙伴系统" class="headerlink" title="什么是伙伴系统"></a>什么是伙伴系统</h2><p>伙伴系统是 Linux 的内存管理算法，采用2的幂次方式分配内存。它通过将内存块成对分配，并在空闲时合并相邻的块，减少内存碎片，保证高效的内存使用。</p>
+<p>举个例子，当有一个16K的空闲区域。</p>
+<p>有一个进程申请了4K的区域，伙伴系统将这个16K切成两个8K，将其中一个8k切成2个4k。</p>
+<p>此时将4k分配给这个进程。空闲区域变成了: 4k(used) 4k(free) 8k(free)</p>
+<p>此时又有一个进程申请了2k的区域，伙伴系统将4k切成2个2k，然后给这个进程： 4k(used) 2k(used) 2k(free) 8k(free)</p>
+<p>此时2k释放，变成了：4k(used) 4k(free) 8k(free)</p>
+<p>将2个2k合并成更大的4k了。</p>
+<p>此时4k释放，变成了16k(free)</p>
+<h2 id="COW"><a href="#COW" class="headerlink" title="COW"></a>COW</h2><p>COW是Copy-On-Write，也就是写时复制。</p>
+<p>COW 的基本思想是，在资源共享的初期，不做资源的复制，直到某个进程或线程修改了这些共享资源时，才会进行复制操作。也就是说，COW 在资源被写入时才会进行复制，避免了不必要的内存拷贝，节省了时间和空间。</p>
+<ul>
+<li>fork时：当进程产生fork，内核会标记RW的pte，当fork的进程修改这些RW的页表的时候才会触发复制然后修改。</li>
+</ul>
+<h2 id="insmod的时候发生了什么"><a href="#insmod的时候发生了什么" class="headerlink" title="insmod的时候发生了什么"></a>insmod的时候发生了什么</h2><p>由于内核模块不像应用程序，默认占有自己独立的地址空间。</p>
+<p>所以内核模块编译的时候需要生成地址无关代码，也就是需要可重定位的特性。</p>
+<p>这里给出一个假设的模块重定位表：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Relocation section &#x27;.rela.text&#x27; at offset 0x240 contains 3 entries:</span><br><span class="line">  Offset          Info    Type            Sym.Value  Sym. Name</span><br><span class="line">  0000000000000020  00000000  R_X86_64_PC32   00000000   simple_init</span><br><span class="line">  0000000000000040  00000000  R_X86_64_PC32   00000000   simple_exit</span><br><span class="line">  0000000000000060  00000000  R_X86_64_PC32   00000000   printk</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><strong>Offset</strong>：表示在模块中的某个位置需要进行重定位。</p>
+</li>
+<li><p><strong>Type</strong>：重定位类型，这里是 <code>R_X86_64_PC32</code>，表示需要修改一个 32 位的相对地址。</p>
+</li>
+<li><p><strong>Sym.Name</strong>：需要调整的符号的名称，例如 <code>simple_init</code>、<code>simple_exit</code> 和 <code>printk</code>。</p>
+</li>
+<li><p><strong>Sym.Value</strong>：符号的值（地址），在模块加载前是未定义的。</p>
+</li>
+</ul>
+<p>在模块加载时，内核根据重定位表中的信息执行以下操作：</p>
+<ol>
+<li><strong>内核加载模块到内存</strong></li>
+</ol>
+<p>当 <code>insmod</code> 或 <code>modprobe</code> 加载模块时，内核会将模块的代码段（如 <code>.text</code>）加载到内核地址空间中的某个位置。假设模块加载到地址 <code>0x80000000</code>。</p>
+<ol start="2">
+<li><strong>解析符号表</strong></li>
+</ol>
+<p>内核会解析模块中的符号表，找出所有需要重定位的符号（如 <code>simple_init</code>、<code>simple_exit</code>、<code>printk</code>）。这些符号在编译时并没有对应的内存地址，而是使用了相对地址或符号名称。</p>
+<ol start="3">
+<li><strong>根据重定位表调整地址</strong></li>
+</ol>
+<p>接下来，内核会遍历重定位表，为每个需要调整的符号计算并替换地址。假设模块被加载到 <code>0x80000000</code>，我们可以按以下步骤调整符号：</p>
+<ul>
+<li>**重定位 <code>simple_init</code>**：<ul>
+<li>在重定位表中，<code>simple_init</code> 的偏移量是 <code>0x20</code>。</li>
+<li>假设 <code>simple_init</code> 在编译时的地址是相对地址，因此它需要调整为内存中的实际地址 <code>0x80002000</code>（假设 <code>simple_init</code> 在模块的 <code>.text</code> 段中的实际位置）。</li>
+<li>内核会修改模块代码中的 <code>0x20</code> 位置，将该位置的地址调整为 <code>0x80002000</code>。</li>
+</ul>
+</li>
+<li>**重定位 <code>simple_exit</code>**：<ul>
+<li>同理，<code>simple_exit</code> 的偏移量是 <code>0x40</code>，需要调整为模块实际加载的地址 <code>0x80002020</code>。</li>
+</ul>
+</li>
+<li>**重定位 <code>printk</code>**：<ul>
+<li><code>printk</code> 是内核提供的函数，因此内核会根据内核符号表查找 <code>printk</code> 的实际地址，并将模块中的 <code>printk</code> 调用地址进行调整。</li>
+</ul>
+</li>
+</ul>
+<h2 id="中断，同步，异步"><a href="#中断，同步，异步" class="headerlink" title="中断，同步，异步"></a>中断，同步，异步</h2><p>中断：<strong>中断（Interrupt）</strong> 是一种硬件机制，用来打断处理器（CPU）当前正在执行的程序流，转而去响应某些紧急或重要的事件。</p>
+<p>同步：同步是一种软件机制，用来等待一件事情的完成才能执行下一件事，也就是说发起方需要等待结果。</p>
+<p>异步：是一种软件机制，发起操作的一方 在操作完成之前不用等待，可以先干别的事，操作完成后另有机制通知。</p>
+<h2 id="SoftIRQ-tasklet-workqueue"><a href="#SoftIRQ-tasklet-workqueue" class="headerlink" title="SoftIRQ, tasklet, workqueue"></a>SoftIRQ, tasklet, workqueue</h2><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>softirq</th>
+<th>tasklet</th>
+<th>workqueue</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>层级</strong></td>
+<td>最底层机制</td>
+<td>基于 softirq 的封装</td>
+<td>基于普通内核线程</td>
+</tr>
+<tr>
+<td><strong>执行上下文</strong></td>
+<td>中断上下文（不可阻塞）</td>
+<td>中断上下文（不可阻塞）</td>
+<td>进程上下文（可以睡眠）</td>
+</tr>
+<tr>
+<td><strong>并发性</strong></td>
+<td>高（每 CPU 并行）</td>
+<td>自动串行化同一个 tasklet（同一 tasklet 不并发）</td>
+<td>有线程调度，可完全并发</td>
+</tr>
+<tr>
+<td><strong>适用场景</strong></td>
+<td>极快的、实时性要求高的处理</td>
+<td>简单延后处理，写起来方便</td>
+<td>需要可能阻塞的较重任务，比如磁盘IO、内存分配</td>
+</tr>
+<tr>
+<td><strong>例子</strong></td>
+<td>网络协议栈收包</td>
+<td>网卡收发包的小处理，定时器回调</td>
+<td>文件系统刷盘，网络协议栈底层处理</td>
+</tr>
+</tbody></table>
+<div class="note info flat"><p>当调用触发softirq函数时，softirq会设置一个pending标志位（bitmap），<strong>中断处理器（硬中断）返回时</strong>，如果检测到 <code>softirq_pending</code> 非 0，就会处理。也可以主动调用 <code>do_softirq()</code> 来处理 pending 的 softirq，比如内核线程或者一些中断处理代码中。</p>
+<p>如果软中断太多，do_softirq() 处理超时（通常是1ms左右的门限），就不会继续在中断上下文里做了，而是唤醒一个普通进程叫 **ksoftirqd&#x2F;***，比如 <code>ksoftirqd/0</code>（第0个CPU）。</p>
+<p>ksoftirqd 是一个优先级较低的内核线程，它的 main loop 里就是不断检查 pending 的 softirq，然后慢慢处理。</p>
+<p><strong>tasklet 是基于 softirq 封装的更简单 API</strong>，它统一用 <code>TASKLET_SOFTIRQ</code> 这一项，把一堆小任务链在一起处理。</p>
+</div>
+
+<hr>
+<h1 id="📟-二、驱动开发相关"><a href="#📟-二、驱动开发相关" class="headerlink" title="📟 二、驱动开发相关"></a>📟 二、驱动开发相关</h1><h2 id="设备树节点如何转换为设备"><a href="#设备树节点如何转换为设备" class="headerlink" title="设备树节点如何转换为设备"></a>设备树节点如何转换为设备</h2><p>首先dts中的node会在linux内核中被解析为一个个的device node的结构体，然后生成struct device结构体，将device node挂到struct device下的of_node成员。</p>
+<p>随后根据不同的总线转换成不同的设备。</p>
+<p>以platform举例：</p>
+<p>如果一个设备想变成platform设备，需要满足以下条件：</p>
+<ul>
+<li><p>一般情况下，只对设备树中根的第1级节点（&#x2F;xx）注册成platform device，也就是对它们的子节点（&#x2F;xx&#x2F;*）并不处理。</p>
+</li>
+<li><p>如果一个结点的compatile属性含有这些特殊的值(“simple-bus”,”simple-mfd”,”isa”,”arm,amba-bus”)之一，并且自己成功注册成了platform_device, 那么它的子结点(需含compatile属性)也可以转换为platform_device（当成总线看待）。</p>
+<ul>
+<li>至于为什么请看<a href="##simple-mfd%E6%98%AF%E4%BB%80%E4%B9%88">simple-mfd</a></li>
+</ul>
+</li>
+<li><p>根节点（&#x2F;）是例外的，生成platfrom_device时，即使有compatible属性也不会处理</p>
+</li>
+</ul>
+<h3 id="节点的什么属性会被转换"><a href="#节点的什么属性会被转换" class="headerlink" title="节点的什么属性会被转换"></a>节点的什么属性会被转换</h3><p>在老版本的内核中，platform_device部分是静态定义的，其实最主要的部分就是resources部分，这一部分描述了当前驱动需要的硬件资源，一般是IO，中断等资源。</p>
+<p>在设备树中，这一类资源通常通过reg属性来描述，中断则通过interrupts来描述；</p>
+<p>所以，设备树中的reg和interrupts资源将会被转换成platform_device内的struct resources资源。</p>
+<h2 id="能不能不通过dts去match"><a href="#能不能不通过dts去match" class="headerlink" title="能不能不通过dts去match"></a>能不能不通过dts去match</h2><p>有的兄弟，有的。</p>
+<p>设备可以通过<code>platform_device_alloc</code>和<code>platform_device_add</code>这种手段手动注册设备到内核。</p>
+<p>此时也可以完成match，因为dts最终就是转换为了device node节点，最终给了deivce结构体，然后再根据这个dts是什么bus下的来确定转换为什么设备。</p>
+<h2 id="驱动模块的状态"><a href="#驱动模块的状态" class="headerlink" title="驱动模块的状态"></a>驱动模块的状态</h2><p>已加载 (Loaded)</p>
+<p>已初始化 (Initialized)</p>
+<p>已卸载 (Unloaded)</p>
+<p>活动 (Active)</p>
+<p>已禁用 (Disabled)</p>
+<p>已移除 (Removed)</p>
+<p>等待 (Pending)</p>
+<p>正在加载 (Loading)</p>
+<p>正在卸载 (Unloading)</p>
+<p>加载失败 (Failed to Load)</p>
+<h2 id="字符设备驱动的核心结构？（cdev、file-operations）"><a href="#字符设备驱动的核心结构？（cdev、file-operations）" class="headerlink" title="字符设备驱动的核心结构？（cdev、file_operations）"></a>字符设备驱动的核心结构？（cdev、file_operations）</h2><ul>
+<li>设备号分配</li>
+<li>初始化驱动</li>
+<li>注册字符设备</li>
+<li>实现ops<ul>
+<li>copy_to_user</li>
+<li>copy_from_user</li>
+</ul>
+</li>
+</ul>
+<h2 id="DMA-如何使用"><a href="#DMA-如何使用" class="headerlink" title="DMA 如何使用"></a>DMA 如何使用</h2><p>首先在dts中进行配置,dma0为dma-controller：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">uart0: serial@10000000 &#123;</span><br><span class="line">    compatible = &quot;vendor,uart&quot;;</span><br><span class="line">    reg = &lt;0x10000000 0x1000&gt;;</span><br><span class="line">    interrupts = &lt;5&gt;;</span><br><span class="line">    dmas = &lt;&amp;dma0 0 0 0&gt;, &lt;&amp;dma0 1 0 0&gt;;   // tx 和 rx channel</span><br><span class="line">    dma-names = &quot;tx&quot;, &quot;rx&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>驱动中获取dma：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dma_chan</span> *<span class="title">rx_chan</span>;</span></span><br><span class="line">rx_chan = dma_request_chan(dev, <span class="string">&quot;rx&quot;</span>);  <span class="comment">// dev 是 struct device*</span></span><br></pre></td></tr></table></figure>
+
+<p>配置传输参数：</p>
+<ul>
+<li><strong>源地址（Source Address）</strong>：数据传输的起始地址。</li>
+<li><strong>目标地址（Destination Address）</strong>：数据传输的目的地。</li>
+<li><strong>数据传输方向</strong>：数据是从外设传输到内存，还是从内存传输到外设。</li>
+<li><strong>传输模式</strong>：如是否支持循环缓冲区，数据传输是否是单次或连续的。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">struct dma_slave_config config = &#123;</span><br><span class="line">    .direction = DMA_DEV_TO_MEM,</span><br><span class="line">    .src_addr = UART_RX_REG,</span><br><span class="line">    .src_addr_width = DMA_SLAVE_BUSWIDTH_1_BYTE,</span><br><span class="line">    .src_maxburst = 1,</span><br><span class="line">&#125;;</span><br><span class="line">dmaengine_slave_config(rx_chan, &amp;config);</span><br></pre></td></tr></table></figure>
+
+<p>提交并准备传输</p>
+<figure class="highlight plaintext"><figcaption><span>dma_async_tx_descriptor *desc;</span></figcaption><table><tr><td class="code"><pre><span class="line">dma_cookie_t cookie;</span><br><span class="line"></span><br><span class="line">desc = dmaengine_prep_slave_single(rx_chan, dma_buf_phys, len,</span><br><span class="line">                                   DMA_DEV_TO_MEM, DMA_PREP_INTERRUPT);</span><br><span class="line">desc-&gt;callback = your_callback_func;</span><br><span class="line">desc-&gt;callback_param = your_data;</span><br><span class="line"></span><br><span class="line">cookie = dmaengine_submit(desc);</span><br><span class="line">dma_async_issue_pending(rx_chan);</span><br></pre></td></tr></table></figure>
+
+<h3 id="什么时候"><a href="#什么时候" class="headerlink" title="什么时候"></a>什么时候</h3><p>需要大量数据传输或者时用DMA，可以让CPU转去做其他事情。</p>
+<h2 id="DMA-cache一致性问题"><a href="#DMA-cache一致性问题" class="headerlink" title="DMA cache一致性问题"></a>DMA cache一致性问题</h2><p>由于主存访问对于cpu来说很慢，所以有cache在中间做缓存。</p>
+<ul>
+<li>当DMA启动的时候，如果数据源是内存，但此时最新的数据在cache中，此时就会导致一致性问题，所以应当先将cache中的内容刷新到主存中，再启动传输。</li>
+<li>如果目的地址是内存，传输完毕后如果cache中有这段内存的数据，cpu会直接从cache中取，而不是内存，此时就会导致不是最新的数据，造成一致性问题。此时应该先将cache中的这段内存数据标记为无效。</li>
+</ul>
+<h2 id="DMA映射"><a href="#DMA映射" class="headerlink" title="DMA映射"></a>DMA映射</h2><p>为什么需要DMA映射？在传统裸机的时候，我们配置好src,dts,width,mode其实就可以开始传输了。</p>
+<p>为什么在这里需要多个DMA映射呢？因为在linux的世界里比较复杂，dma访问的是物理地址，不能访问虚拟地址。</p>
+<p>如果有IOMMU，dma_map_xx做的其实就是将虚拟地址转换成经过IOMMU的地址，让dma能够正常访问。</p>
+<p>如果没有IOMMU，dma_map_xx做的其实就是v2p，然后可能刷一下cache这样的操作。</p>
+<p>但是注意，这里不一定是绝对的pa，不同平台的物理地址规则（比如总线地址有无偏移）也可能不同，<br>所以永远用标准的 dma_map_xxx()，不要自己偷懒直接拿 virt_to_phys()。</p>
+<h3 id="一致性映射"><a href="#一致性映射" class="headerlink" title="一致性映射"></a>一致性映射</h3><p>含义：分配一块CPU和设备都能直接访问的内存，不需要额外同步。</p>
+<p>特点：</p>
+<p>CPU和设备看到的数据始终是一致的。</p>
+<p>通常是通过 dma_alloc_coherent() 分配的。</p>
+<p>缺点：</p>
+<p>这种内存可能带缓存属性限制（比如不可缓存），速度比普通内存慢。</p>
+<p>用量不能太大，适合小块数据，比如描述符、控制块。</p>
+<h3 id="流式映射"><a href="#流式映射" class="headerlink" title="流式映射"></a>流式映射</h3><p>含义：用普通内存，在要DMA之前做同步，DMA完成后再同步。</p>
+<p>特点：</p>
+<p>通过 dma_map_single() 或 dma_map_page() 把内存映射给设备。</p>
+<p>在 CPU写完后，要 dma_sync_for_device()，让设备能读到。</p>
+<p>在 设备写完后，要 dma_sync_for_cpu()，让CPU能读到。</p>
+<p>优点：</p>
+<p>可以用普通缓存内存，访问快。</p>
+<p>缺点：</p>
+<p>需要手动同步（Cache维护），操作多了容易出错。</p>
+<h3 id="扩展DMA映射"><a href="#扩展DMA映射" class="headerlink" title="扩展DMA映射"></a>扩展DMA映射</h3><p>含义：标准 dma_map&#x2F;dma_unmap 之外，Linux 还扩展了一些特殊情况的接口，比如：</p>
+<p>dma_map_resource()：直接映射 MMIO 区域。</p>
+<p>dma_mmap_coherent()：把 coherent memory 映射到用户态。</p>
+<p>特点：</p>
+<p>主要是为了适配不同硬件场景，比如 MMIO、用户态共享等。</p>
+<p>总结一句话：扩展是补充标准API没法覆盖的用法。</p>
+<h3 id="散列DMA映射"><a href="#散列DMA映射" class="headerlink" title="散列DMA映射"></a>散列DMA映射</h3><p>含义：支持把一大块数据分散在不同物理页上，设备可以连续读写。</p>
+<p>特点：</p>
+<p>不是一大块连续内存，而是多个小块拼起来。</p>
+<p>通过 dma_map_sg() 和 dma_unmap_sg() 完成映射。</p>
+<p>设备要求：</p>
+<p>必须支持SG list（scatter-gather list），就是可以一次性收一组地址。</p>
+<p>典型场景：</p>
+<p>网络收发大包（sk_buff 里的数据零拷贝）。</p>
+<p>大文件DMA（比如SCSI设备传输文件）。</p>
+<h2 id="regmap-框架你用过没？做寄存器读写有什么坑？"><a href="#regmap-框架你用过没？做寄存器读写有什么坑？" class="headerlink" title="regmap 框架你用过没？做寄存器读写有什么坑？"></a>regmap 框架你用过没？做寄存器读写有什么坑？</h2><p><code>regmap</code> 是 Linux 内核提供的一种通用框架，用来简化设备寄存器的读写操作。它将底层硬件接口（如 I2C、SPI、MMIO 等）与高层驱动逻辑进行抽象和统一处理。使用者不需要再关心i2c msg的拼接，时序控制等。</p>
+<p>坑：</p>
+<ul>
+<li>寄存器缓存一致性问题： <code>regmap</code> 提供了缓存机制来提高性能，但在一些特殊情况下，缓存与实际硬件状态可能不同步，导致读到过时的数据或写入数据未能立即反映到硬件。为了解决这个问题，可能需要手动刷新缓存，或禁用缓存（<code>REGMAP_CACHE</code>）。<ul>
+<li>regmap_sync强制刷新缓存</li>
+<li>读取硬件状态前确保缓存已经更新</li>
+</ul>
+</li>
+<li>增量访问：某些硬件设备不支持通过自动递增的方式来访问连续的寄存器。在这种情况下，使用 <code>regmap</code> 的某些操作可能会失败</li>
+</ul>
+<h2 id="syscon怎么使用"><a href="#syscon怎么使用" class="headerlink" title="syscon怎么使用"></a>syscon怎么使用</h2><p>很多 SoC 芯片中，一个寄存器区域可能控制着多个不同模块，而这些模块又分别由不同的驱动来控制。为了避免多驱动重复映射同一段地址（导致资源冲突），Linux 引入了 <code>syscon</code> 来集中管理这些共享寄存器。</p>
+<h3 id="在驱动中如何使用？"><a href="#在驱动中如何使用？" class="headerlink" title="在驱动中如何使用？"></a>在驱动中如何使用？</h3><p>有很多方法可以使用，前提是获得到syscon节点，例子：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">regmap</span> *<span class="title">regmap</span>;</span></span><br><span class="line">regmap = syscon_regmap_lookup_by_phandle(dev-&gt;of_node, <span class="string">&quot;syscon&quot;</span>);</span><br><span class="line"><span class="keyword">if</span> (IS_ERR(regmap))</span><br><span class="line">    <span class="keyword">return</span> PTR_ERR(regmap);</span><br><span class="line"></span><br><span class="line">regmap_read(regmap, offset, &amp;val);</span><br></pre></td></tr></table></figure>
+
+<h2 id="simple-mfd是什么"><a href="#simple-mfd是什么" class="headerlink" title="simple-mfd是什么"></a>simple-mfd是什么</h2><p><code>simple-mfd</code> 是一个“容器设备”，用于声明一个寄存器区域下还有多个子设备（比如 clock、reset、pinctrl 等）。</p>
+<p>SoC 里经常有一些硬件模块的寄存器<strong>都集中在一块区域</strong>，比如：</p>
+<ul>
+<li><code>[0x00]</code> 是 reset 控制器的寄存器</li>
+<li><code>[0x10]</code> 是 clock 控制器的寄存器</li>
+<li><code>[0x20]</code> 是 pinctrl 控制器的寄存器</li>
+</ul>
+<p>你不可能一个设备就注册三次这些地址，于是 Linux 内核提供了一个机制叫 **<code>mfd</code>**，专门用来声明这种「一段地址包含多个设备」的场景。</p>
+<p>告诉 Linux：</p>
+<blockquote>
+<p>这不是单一功能的设备，而是一段地址区域里有多个子设备。</p>
+</blockquote>
+<p>于是 Linux 会自动把子节点当成独立的 platform device 去注册，绑定各自的驱动。</p>
+<h2 id="设备驱动中你做过的调试手段有哪些？怎么查-kernel-log、跟踪问题？"><a href="#设备驱动中你做过的调试手段有哪些？怎么查-kernel-log、跟踪问题？" class="headerlink" title="设备驱动中你做过的调试手段有哪些？怎么查 kernel log、跟踪问题？"></a>设备驱动中你做过的调试手段有哪些？怎么查 kernel log、跟踪问题？</h2><ul>
+<li>kgdb:<ul>
+<li>vmlinux，保存调是符号</li>
+<li>开启config</li>
+<li>通过串口调试</li>
+</ul>
+</li>
+<li>ftrace: 打印系统调用</li>
+<li>strace: 用户空间跟踪</li>
+<li>ioctrl: 修改驱动的一些参数达到debug效果</li>
+<li>sysfs：跟ioctrl起的效果差不多</li>
+</ul>
+<h2 id="怎么写一个能挂到-sysfs-的驱动调试接口？"><a href="#怎么写一个能挂到-sysfs-的驱动调试接口？" class="headerlink" title="怎么写一个能挂到 sysfs 的驱动调试接口？"></a>怎么写一个能挂到 sysfs 的驱动调试接口？</h2><ul>
+<li>创建kobject（挂载到&#x2F;sys&#x2F;kernel&#x2F;debug下）</li>
+<li>添加sysfs属性到到kobject</li>
+<li>实现show和store函数</li>
+</ul>
+<h2 id="pinctrl驱动"><a href="#pinctrl驱动" class="headerlink" title="pinctrl驱动"></a>pinctrl驱动</h2><p>以pinctrl-k230为例。</p>
+<h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>pinctrl有function，group，pin和conf的概念。</p>
+<ul>
+<li>function：功能，用来表示这些引脚包含了哪些组，一个function包含一个或多个组</li>
+<li>group：组，用来表明一个或多个引脚的集合，比如rxd和txd是传输组，cts和rts是控制组</li>
+<li>pin: 引脚，没什么好说的</li>
+<li>conf：引脚除了复用为某个功能，还需要一些配置，比如上拉，下拉，此时conf就有了作用</li>
+</ul>
+<h3 id="实现函数"><a href="#实现函数" class="headerlink" title="实现函数"></a>实现函数</h3><p>首先需要在probe函数中parse dts，然后将dts中的节点按自己的想法转成function, group, pin, conf。</p>
+<p>对于conf，目前pinctrl框架已经实现了通用的属性节点解析和还原。可以通过api一键解析，再也不用使用厂商自定义的字段了，除非你要求的conf没在pinctrl框架实现。</p>
+<p>随后要填充ops:</p>
+<h4 id="pinctrl-ops"><a href="#pinctrl-ops" class="headerlink" title="pinctrl-ops"></a>pinctrl-ops</h4><ul>
+<li>pinctrl-ops<ul>
+<li>get_groups_count</li>
+<li>get_groups_name</li>
+<li>get_groups_pins</li>
+<li>dt_node_to_map</li>
+<li>dt_free_map</li>
+</ul>
+</li>
+</ul>
+<p>前三个看名字就知道什么意思了，将probe阶段解析的dts返回回去就可以了。</p>
+<p>重点是dt_node_to_map，这个函数中将pinmux和和config都转成maps。</p>
+<p>很显然这是对于group来说的，这里要注意的是，maps的个数应该是：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; func-&gt;ngroups; ++i) &#123;</span><br><span class="line">    grp_id = func-&gt;group_idx[i];</span><br><span class="line">    <span class="comment">/* npins of config map plus a mux map */</span></span><br><span class="line">    map_num += info-&gt;groups[grp_id].num_pins + <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>因为一个map只能对应pinmux或者conf，所以为每个引脚分配conf，然后多余的一个用来pinmux。</p>
+<h4 id="pinmux-ops"><a href="#pinmux-ops" class="headerlink" title="pinmux-ops"></a>pinmux-ops</h4><p>对于传进来的参数更新pinctrl的寄存器就可以了</p>
+<h4 id="pinconf-ops"><a href="#pinconf-ops" class="headerlink" title="pinconf-ops"></a>pinconf-ops</h4><p>跟pinmux相同</p>
+<h2 id="USB扫盲"><a href="#USB扫盲" class="headerlink" title="USB扫盲"></a>USB扫盲</h2><h3 id="USB中速率"><a href="#USB中速率" class="headerlink" title="USB中速率"></a>USB中速率</h3><p>Full-speed&#x2F;high-speed&#x2F;low-speed</p>
+<p>其中full-speed能和任意一种模式结合，但high-speed和low-speed无法同时支持。</p>
+<h3 id="USB怎么检测连接和断开"><a href="#USB怎么检测连接和断开" class="headerlink" title="USB怎么检测连接和断开"></a>USB怎么检测连接和断开</h3><p>USB HUB(root hub)的D-和D+都连接有15K下拉电阻。</p>
+<ul>
+<li>Full-speed设备的D+引脚连接1.5K上拉电阻，当空闲D+由低到高则连接，由高到低则断开。<ul>
+<li>High-speed设备与Full-speed电气连接相同，断开相同。在连接的时候，当设备收到se0（复位）信号之后，会主动向hub发送K信号，表明支持High-speed</li>
+</ul>
+</li>
+<li>Low-speed设备的D-引脚连接1.5K上拉电阻，当空闲D+由低到高则连接，由高到低则断开。</li>
+</ul>
+<div class="note info flat"><p>当工作于high-speed的时候会断开上拉电阻，只保留hub的下拉电阻。</p>
+<p>对于工作在high-speed模式的hub和dev，D+和D-都有45欧姆的下拉电阻，用来消除反射信号</p>
+</div>
+
+<hr>
+<h1 id="🧩-三、BSP-适配和系统裁剪"><a href="#🧩-三、BSP-适配和系统裁剪" class="headerlink" title="🧩 三、BSP 适配和系统裁剪"></a>🧩 三、BSP 适配和系统裁剪</h1><h3 id="你怎么给一个新板子适配-Linux？"><a href="#你怎么给一个新板子适配-Linux？" class="headerlink" title="你怎么给一个新板子适配 Linux？"></a>你怎么给一个新板子适配 Linux？</h3><h3 id="你移植过哪几个平台的-BSP？都做了哪些模块的适配？"><a href="#你移植过哪几个平台的-BSP？都做了哪些模块的适配？" class="headerlink" title="你移植过哪几个平台的 BSP？都做了哪些模块的适配？"></a>你移植过哪几个平台的 BSP？都做了哪些模块的适配？</h3><ul>
+<li>rk3568<ul>
+<li>can</li>
+<li>485</li>
+<li>rtl8125</li>
+<li>jl2101</li>
+<li>ec20</li>
+<li>intel 7260</li>
+</ul>
+</li>
+<li>a33<ul>
+<li>ap6212</li>
+<li>r8152</li>
+</ul>
+</li>
+<li>k1<ul>
+<li>pmic<ul>
+<li>regulator</li>
+<li>rtc</li>
+<li>gpio</li>
+</ul>
+</li>
+<li>i2c</li>
+</ul>
+</li>
+<li>k230<ul>
+<li>npu</li>
+<li>clock</li>
+<li>eth</li>
+<li>i2c</li>
+<li>timer</li>
+<li>watchdog</li>
+<li>usb</li>
+<li>thermal</li>
+</ul>
+</li>
+</ul>
+<h3 id="什么是-device-tree-overlay？你什么时候会用它？"><a href="#什么是-device-tree-overlay？你什么时候会用它？" class="headerlink" title="什么是 device tree overlay？你什么时候会用它？"></a>什么是 device tree overlay？你什么时候会用它？</h3><p>在运行时或加载阶段对基础设备树（Base Device Tree）进行扩展或修改的机制。它可以在不更改原始设备树文件的前提下，动态地添加、修改、启用设备节点。</p>
+<p>通常是dts文件编译成dtbo。</p>
+<p>加载：</p>
+<ul>
+<li>uboot使用fdt apply xxx.dtbo加载</li>
+<li>内核开启overlay<ul>
+<li><code>mount -t configfs none /sys/kernel/config</code></li>
+<li><code>mkdir /sys/kernel/config/device-tree/overlays/my_overlay</code></li>
+<li><code>cat my_overlay.dtbo &gt; /sys/kernel/config/device-tree/overlays/my_overlay/dtbo</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="Linux-启动卡在-early-boot，你怎么排查？"><a href="#Linux-启动卡在-early-boot，你怎么排查？" class="headerlink" title="Linux 启动卡在 early boot，你怎么排查？"></a>Linux 启动卡在 early boot，你怎么排查？</h3><ul>
+<li>检查uboot参数</li>
+<li>检查镜像格式，内存地址设置</li>
+<li>检查是否内存覆盖</li>
+<li>加上earlycon参数</li>
+<li>检查串口配置</li>
+</ul>
+<h3 id="怎么在系统裁剪中定位无用模块？怎么控制编译-size？"><a href="#怎么在系统裁剪中定位无用模块？怎么控制编译-size？" class="headerlink" title="怎么在系统裁剪中定位无用模块？怎么控制编译 size？"></a>怎么在系统裁剪中定位无用模块？怎么控制编译 size？</h3><ul>
+<li>GCOV &#x2F; LCOV：编译内核&#x2F;应用带上 <code>CONFIG_GCOV</code>，运行后看哪些模块根本没被调用过。<ul>
+<li>可以生成覆盖报告，检查哪些c根本没被调用过</li>
+</ul>
+</li>
+<li>LTO：LTO，全称 <strong>Link Time Optimization</strong>（链接时优化），是一种 <strong>跨文件级别的编译优化技术</strong>。简单说，它可以让编译器在链接阶段看到整个程序（或整个内核），从而进行更深入的优化，比如函数内联、删除死代码、消除冗余符号等。</li>
+<li>去除不需要的config<ul>
+<li>nfs</li>
+<li>多余的文件系统</li>
+<li>多余的网络协议，如rndis等</li>
+<li>未使用的CPU&#x2F;架构相关选项（defcofig会开很多）</li>
+<li>GUI框架等</li>
+<li><code>scripts/config --disable CONFIG_SOMETHING</code></li>
+</ul>
+</li>
+<li>modprobe -r去除不需要的模块看看是否系统稳定</li>
+</ul>
+<hr>
+<h1 id="🧪-四、调试和实战经验"><a href="#🧪-四、调试和实战经验" class="headerlink" title="🧪 四、调试和实战经验"></a>🧪 四、调试和实战经验</h1><h3 id="你调过哪些-tricky-的-bug？怎么解决的？"><a href="#你调过哪些-tricky-的-bug？怎么解决的？" class="headerlink" title="你调过哪些 tricky 的 bug？怎么解决的？"></a>你调过哪些 tricky 的 bug？怎么解决的？</h3><h3 id="你怎么用串口-网口调试板子？"><a href="#你怎么用串口-网口调试板子？" class="headerlink" title="你怎么用串口&#x2F;网口调试板子？"></a>你怎么用串口&#x2F;网口调试板子？</h3><h3 id="你有没有接触过-kgdb、crash、ftrace-或-perf-这些工具？"><a href="#你有没有接触过-kgdb、crash、ftrace-或-perf-这些工具？" class="headerlink" title="你有没有接触过 kgdb、crash、ftrace 或 perf 这些工具？"></a>你有没有接触过 kgdb、crash、ftrace 或 perf 这些工具？</h3><h3 id="一次调不出网口-USB-WiFi-的问题，你会怎么一步步排查？"><a href="#一次调不出网口-USB-WiFi-的问题，你会怎么一步步排查？" class="headerlink" title="一次调不出网口&#x2F;USB&#x2F;WiFi 的问题，你会怎么一步步排查？"></a>一次调不出网口&#x2F;USB&#x2F;WiFi 的问题，你会怎么一步步排查？</h3><h3 id="你适配过哪些外设？网卡、串口、I2C-设备、屏幕、按键、LED？分别遇到过什么问题？"><a href="#你适配过哪些外设？网卡、串口、I2C-设备、屏幕、按键、LED？分别遇到过什么问题？" class="headerlink" title="你适配过哪些外设？网卡、串口、I2C 设备、屏幕、按键、LED？分别遇到过什么问题？"></a>你适配过哪些外设？网卡、串口、I2C 设备、屏幕、按键、LED？分别遇到过什么问题？</h3><hr>
+<h1 id="🚀-五、进阶与加分项"><a href="#🚀-五、进阶与加分项" class="headerlink" title="🚀 五、进阶与加分项"></a>🚀 五、进阶与加分项</h1><ol>
+<li><strong>熟悉 device tree 编写和调试工具，比如 dtc&#x2F;dumpdtb？</strong></li>
+<li><strong>了解 OpenWrt &#x2F; Buildroot &#x2F; Yocto 哪些？能快速出系统？</strong></li>
+<li><strong>有没有做过 patch 提交或者分析 mainline kernel 的提交？</strong></li>
+</ol>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org">Troy Mitchell</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://blog.troy-y.org/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/">https://blog.troy-y.org/2025/04/24/嵌入式Linux面经-随意随缘不完整版/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://blog.troy-y.org" target="_blank">Troy's blog</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/linux/">linux</a><a class="post-meta__tags" href="/tags/kernel/">kernel</a><a class="post-meta__tags" href="/tags/job/">job</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/133468432?v=4" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/sharejs/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button"><i class="fas fa-qrcode"></i>Buy me a coffee</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/wxzsm.jpg" target="_blank"><img class="post-qr-code-img" src="/img/wxzsm.jpg"/></a><div class="post-qr-code-desc"></div></li></ul></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info"><div class="info-1"><div class="info-item-1">上一篇</div><div class="info-item-2">platform device driver[1]</div></div><div class="info-2"><div class="info-item-1">platform device driver[0]platform device driver[1]  Platform驱动probe函数是如何被调用的回到我们最常使用的platform_driver_register函数,这其实是一个宏定义，属于函数wrap。 /* * use a macro to avoid include chaining to get THIS_MODULE */#define platform_driver_register(drv) \	__platform_driver_register(drv, THIS_MODULE)  __platform_driver_register__platform_driver_register函数定义如下： /** * __platform_driver_register - register a driver for platform-level devices * @drv: platform driver structure * @owner: owning module/driver */int...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Linux设备树[0]-理解dtb格式</div></div><div class="info-2"><div class="info-item-1">Linux设备树[0]-理解dtb格式  DTBdtb文件由dts通过dtc命令编译而来。 具体结构应该如下：  alignment gap对齐中间的alignment gap部分表示对齐间隙，它并非是必须的，它是否被提供以及大小由具体的平台对数据对齐和的要求以及数据是否已经对齐来决定。 elf headerDTB文件跟elf文件一样，都有一个header，也就是meta-data。dtb文件的meta-data大小为40字节。 可以看下linux代码中对于dtb头信息的定义： // In scripts/dtc/libfdt/fdt.hstruct fdt_header &#123;	fdt32_t magic;			 /* magic word FDT_MAGIC */	fdt32_t totalsize;		 /* total size of DT block */	fdt32_t off_dt_struct;		 /* offset to structure */	fdt32_t off_dt_strings;		 /* offset to strings...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[0]-理解dtb格式</div></div><div class="info-2"><div class="info-item-1">Linux设备树[0]-理解dtb格式  DTBdtb文件由dts通过dtc命令编译而来。 具体结构应该如下：  alignment gap对齐中间的alignment gap部分表示对齐间隙，它并非是必须的，它是否被提供以及大小由具体的平台对数据对齐和的要求以及数据是否已经对齐来决定。 elf headerDTB文件跟elf文件一样，都有一个header，也就是meta-data。dtb文件的meta-data大小为40字节。 可以看下linux代码中对于dtb头信息的定义： // In scripts/dtc/libfdt/fdt.hstruct fdt_header &#123;	fdt32_t magic;			 /* magic word FDT_MAGIC */	fdt32_t totalsize;		 /* total size of DT block */	fdt32_t off_dt_struct;		 /* offset to structure */	fdt32_t off_dt_strings;		 /* offset to strings...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Linux设备树[1]-解析设备树</div></div><div class="info-2"><div class="info-item-1">Uboot如何将设备树传给kernel在riscv架构下，uboot会将dtb的物理地址放到a1寄存器中。 这点可在arch/riscv/head.S中看到些许端倪。 #ifdef CONFIG_BUILTIN_DTB	la a0, __dtb_start	XIP_FIXUP_OFFSET a0#else	mv a0, a1#endif /* CONFIG_BUILTIN_DTB */	/* Set trap vector to spin forever to help debug */	la a3, .Lsecondary_park	csrw CSR_TVEC, a3	call...</div></div></div></a><a class="pagination-related" href="/2024/08/22/OpenHarmony-on-rk3568%E4%BD%BF%E8%83%BDcan/" title="OpenHarmony on rk3568使能can"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-22</div><div class="info-item-2">OpenHarmony on rk3568使能can</div></div><div class="info-2"><div class="info-item-1">EnvOH: v3.2.3chip: rk3568 Content首先查看源码中是否具有CAN_ROCKCHIP选项： ❯ find -name &quot;Kconfig&quot; -exec grep -n &quot;CAN_ROCKCHIP&quot; &#123;&#125; +❯...</div></div></div></a><a class="pagination-related" href="/2024/08/23/Rockchip-%E7%B3%BB%E5%88%97%E8%8A%AF%E7%89%87uboot-distro-cmd/" title="rk3568 uboot distro_cmd"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-08-23</div><div class="info-item-2">rk3568 uboot distro_cmd</div></div><div class="info-2"><div class="info-item-1">bootcmd在uboot的shell中使用printenv命令可以看到bootcmd的字符串： =&gt; printenv bootcmdbootcmd=boot_android $&#123;devtype&#125; $&#123;devnum&#125;;boot_fit;bootrkp;run distro_bootcmd;  命令解析：    - boot_android: 查找并尝试启动安卓镜像。    - boot_fix: 查找并尝试启动fit格式镜像。    - bootrkp: 查找并尝试启动rk分区镜像。    - run distro_bootcmd: 这就是这篇文章的主角了，distro_bootcmd可以根据不同介质去启动kernel内核，比如kernel可以在sd卡，emmc上，都可以顺利启动。 以上提到的bootcmd可以在include/configs/rockchip-common.h中看到相关定义： #if defined(CONFIG_AVB_VBMETA_PUBLIC_KEY_VALIDATE)#define...</div></div></div></a><a class="pagination-related" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2025-04-26</div><div class="info-item-2">Uboot如何传递bootargs给Linux</div></div><div class="info-2"><div class="info-item-1">Uboot如何传递bootargsuboot并不是直接将bootargs传递给kernel，而是修改dts中的chosen节点实现的。 在uboot中可以发现该函数： int fdt_chosen(void *fdt)&#123;	struct abuf buf = &#123;&#125;;	int   nodeoffset;	int   err;	const char *str;		/* used to set string properties */		...	/* find or create &quot;/chosen&quot; node. */	nodeoffset = fdt_find_or_add_subnode(fdt, 0, &quot;chosen&quot;);	if (nodeoffset &lt; 0)		return nodeoffset;	...	str = board_fdt_chosen_bootargs(fdt_get_property(fdt, nodeoffset,							 &quot;bootargs&quot;,...</div></div></div></a><a class="pagination-related" href="/2024/07/03/earlycon/" title="earlycon"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2024-07-03</div><div class="info-item-2">earlycon</div></div><div class="info-2"><div class="info-item-1">引言earlycon 是一个早期控制台（early console）机制，用于在系统启动的早期阶段提供输出功能。在内核启动过程的早期阶段，标准的控制台设备（如串口、VGA控制台等）可能还没有初始化完成，这时可以使用 earlycon 来输出调试信息，帮助开发者调试内核启动过程中的问题。 如何开启earlycon要在内核启动时启用 earlycon，需要在内核配置中启用几个相关的配置选项： CONFIG_SERIAL_EARLYCONCONFIG_OF_EARLY_FLATTREE  还需要在内核命令行参数中添加相关设置。例如： earlycon=pxa_serial,0xd4017000  具体流程在 Kernel 初始化汇编代码执行完跳转到 start_kernel 之后，setup_arch 调用 parse_early_param，进而在其中执行 early_param...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="twikoo-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/133468432?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Troy Mitchell</div><div class="author-info-description">对弈平凡</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">69</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">24</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">13</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/troymitchell911"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="mailto:troymitchell988@gmail.com" target="_blank" title="Email"><i class="fas fa-envelope" style="color: #4a7dbe;"></i></a><a class="social-icon" href="https://troy-y.org" target="_blank" title="Me"><i class="fas fa-user" style="color: #6c5ce7;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">Words can't describe me</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%8C%90-%E4%B8%80%E3%80%81%E5%86%85%E6%A0%B8%E5%9F%BA%E7%A1%80%EF%BC%88%E9%A9%B1%E5%8A%A8%E5%92%8C-BSP-%E7%9A%84%E5%9C%B0%E5%9F%BA%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">🌐 一、内核基础（驱动和 BSP 的地基）</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Linux-%E5%86%85%E6%A0%B8%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B%EF%BC%9F%EF%BC%88%E4%BB%8E-U-Boot-ATF-%E5%88%B0-init%EF%BC%89"><span class="toc-number">1.1.</span> <span class="toc-text">Linux 内核启动流程？（从 U-Boot &#x2F; ATF 到 init）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%8F%AF%E9%80%89%E9%98%B6%E6%AE%B5%EF%BC%9AATF%EF%BC%88Arm-Trusted-Firmware%EF%BC%89%E6%88%96-OpenSBI%EF%BC%88RISC-V%EF%BC%89"><span class="toc-number">1.1.1.</span> <span class="toc-text">可选阶段：ATF（Arm Trusted Firmware）或 OpenSBI（RISC-V）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E7%AE%80%E7%95%A5%E7%89%88%E6%9C%AC"><span class="toc-number">1.1.2.</span> <span class="toc-text">简略版本</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F%E5%AE%83%E7%9A%84%E4%BD%9C%E7%94%A8%EF%BC%9F%E4%BD%A0%E6%80%8E%E4%B9%88%E5%86%99-%E6%94%B9%E8%BF%87%EF%BC%9F"><span class="toc-number">1.2.</span> <span class="toc-text">设备树是什么？它的作用？你怎么写&#x2F;改过？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF-platform-device-%E5%92%8C-platform-driver%EF%BC%9F%E6%80%8E%E4%B9%88%E5%8C%B9%E9%85%8D%EF%BC%9F"><span class="toc-number">1.3.</span> <span class="toc-text">什么是 platform_device 和 platform_driver？怎么匹配？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%AD%E6%96%AD%E5%A4%84%E7%90%86%E6%B5%81%E7%A8%8B%EF%BC%88%E4%BB%8E%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E5%88%B0-ISR%EF%BC%89"><span class="toc-number">1.4.</span> <span class="toc-text">中断处理流程（从硬件中断到 ISR）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E6%A0%B8%E7%A9%BA%E9%97%B4%E5%92%8C%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F%EF%BC%9F%EF%BC%88ioctl%E3%80%81procfs%E3%80%81sysfs%E3%80%81netlink%EF%BC%89"><span class="toc-number">1.5.</span> <span class="toc-text">内核空间和用户空间的通信方式？（ioctl、procfs、sysfs、netlink）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Linux-%E7%9A%84%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E6%9C%BA%E5%88%B6%E7%AE%80%E8%A6%81%E8%AF%B4%E4%B8%80%E4%B8%8B%EF%BC%9F"><span class="toc-number">1.6.</span> <span class="toc-text">Linux 的内存管理机制简要说一下？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#slub-slab%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB"><span class="toc-number">1.7.</span> <span class="toc-text">slub &#x2F; slab有什么区别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BD%A0%E6%80%8E%E4%B9%88%E7%9C%8B%E5%BE%85%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E4%B8%AD%E7%9A%84-probe-%E5%87%BD%E6%95%B0%EF%BC%9F%E8%B0%83%E7%94%A8%E6%B5%81%E7%A8%8B%E6%98%AF%EF%BC%9F"><span class="toc-number">1.8.</span> <span class="toc-text">你怎么看待设备驱动中的 probe 函数？调用流程是？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%85%B1%E4%BA%AB%E4%B8%AD%E6%96%AD%EF%BC%9F"><span class="toc-number">1.9.</span> <span class="toc-text">什么是共享中断？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ioremap%E5%92%8CIOMMU"><span class="toc-number">1.10.</span> <span class="toc-text">ioremap和IOMMU</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E5%AD%90%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.11.</span> <span class="toc-text">内存管理子系统</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%9C%E7%94%A8"><span class="toc-number">1.11.1.</span> <span class="toc-text">作用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%99%9A%E6%8B%9F%E5%86%85%E5%AD%98%E4%B8%8E%E7%89%A9%E7%90%86%E5%86%85%E5%AD%98%E7%9A%84%E5%8C%BA%E5%88%86"><span class="toc-number">1.11.2.</span> <span class="toc-text">虚拟内存与物理内存的区分</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E6%96%B9%E5%BC%8F"><span class="toc-number">1.11.3.</span> <span class="toc-text">内存分配方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%A1%B5%E9%9D%A2%E4%BA%A4%E6%8D%A2%E4%B8%8E%E4%BA%A4%E6%8D%A2%E7%A9%BA%E9%97%B4%EF%BC%88Swap%EF%BC%89"><span class="toc-number">1.11.4.</span> <span class="toc-text">页面交换与交换空间（Swap）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84"><span class="toc-number">1.11.5.</span> <span class="toc-text">内存映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E4%B8%AD%E7%9A%84%E6%A0%B8%E5%BF%83%E7%AE%97%E6%B3%95"><span class="toc-number">1.11.6.</span> <span class="toc-text">内存管理中的核心算法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E4%BC%99%E4%BC%B4%E7%B3%BB%E7%BB%9F"><span class="toc-number">1.12.</span> <span class="toc-text">什么是伙伴系统</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#COW"><span class="toc-number">1.13.</span> <span class="toc-text">COW</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#insmod%E7%9A%84%E6%97%B6%E5%80%99%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88"><span class="toc-number">1.14.</span> <span class="toc-text">insmod的时候发生了什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%AD%E6%96%AD%EF%BC%8C%E5%90%8C%E6%AD%A5%EF%BC%8C%E5%BC%82%E6%AD%A5"><span class="toc-number">1.15.</span> <span class="toc-text">中断，同步，异步</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SoftIRQ-tasklet-workqueue"><span class="toc-number">1.16.</span> <span class="toc-text">SoftIRQ, tasklet, workqueue</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%93%9F-%E4%BA%8C%E3%80%81%E9%A9%B1%E5%8A%A8%E5%BC%80%E5%8F%91%E7%9B%B8%E5%85%B3"><span class="toc-number">2.</span> <span class="toc-text">📟 二、驱动开发相关</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91%E8%8A%82%E7%82%B9%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E4%B8%BA%E8%AE%BE%E5%A4%87"><span class="toc-number">2.1.</span> <span class="toc-text">设备树节点如何转换为设备</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E8%8A%82%E7%82%B9%E7%9A%84%E4%BB%80%E4%B9%88%E5%B1%9E%E6%80%A7%E4%BC%9A%E8%A2%AB%E8%BD%AC%E6%8D%A2"><span class="toc-number">2.1.1.</span> <span class="toc-text">节点的什么属性会被转换</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%83%BD%E4%B8%8D%E8%83%BD%E4%B8%8D%E9%80%9A%E8%BF%87dts%E5%8E%BBmatch"><span class="toc-number">2.2.</span> <span class="toc-text">能不能不通过dts去match</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%A9%B1%E5%8A%A8%E6%A8%A1%E5%9D%97%E7%9A%84%E7%8A%B6%E6%80%81"><span class="toc-number">2.3.</span> <span class="toc-text">驱动模块的状态</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E7%9A%84%E6%A0%B8%E5%BF%83%E7%BB%93%E6%9E%84%EF%BC%9F%EF%BC%88cdev%E3%80%81file-operations%EF%BC%89"><span class="toc-number">2.4.</span> <span class="toc-text">字符设备驱动的核心结构？（cdev、file_operations）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DMA-%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8"><span class="toc-number">2.5.</span> <span class="toc-text">DMA 如何使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99"><span class="toc-number">2.5.1.</span> <span class="toc-text">什么时候</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DMA-cache%E4%B8%80%E8%87%B4%E6%80%A7%E9%97%AE%E9%A2%98"><span class="toc-number">2.6.</span> <span class="toc-text">DMA cache一致性问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DMA%E6%98%A0%E5%B0%84"><span class="toc-number">2.7.</span> <span class="toc-text">DMA映射</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E8%87%B4%E6%80%A7%E6%98%A0%E5%B0%84"><span class="toc-number">2.7.1.</span> <span class="toc-text">一致性映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%B5%81%E5%BC%8F%E6%98%A0%E5%B0%84"><span class="toc-number">2.7.2.</span> <span class="toc-text">流式映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%89%A9%E5%B1%95DMA%E6%98%A0%E5%B0%84"><span class="toc-number">2.7.3.</span> <span class="toc-text">扩展DMA映射</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%95%A3%E5%88%97DMA%E6%98%A0%E5%B0%84"><span class="toc-number">2.7.4.</span> <span class="toc-text">散列DMA映射</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#regmap-%E6%A1%86%E6%9E%B6%E4%BD%A0%E7%94%A8%E8%BF%87%E6%B2%A1%EF%BC%9F%E5%81%9A%E5%AF%84%E5%AD%98%E5%99%A8%E8%AF%BB%E5%86%99%E6%9C%89%E4%BB%80%E4%B9%88%E5%9D%91%EF%BC%9F"><span class="toc-number">2.8.</span> <span class="toc-text">regmap 框架你用过没？做寄存器读写有什么坑？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#syscon%E6%80%8E%E4%B9%88%E4%BD%BF%E7%94%A8"><span class="toc-number">2.9.</span> <span class="toc-text">syscon怎么使用</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%9C%A8%E9%A9%B1%E5%8A%A8%E4%B8%AD%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%EF%BC%9F"><span class="toc-number">2.9.1.</span> <span class="toc-text">在驱动中如何使用？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#simple-mfd%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">2.10.</span> <span class="toc-text">simple-mfd是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E4%B8%AD%E4%BD%A0%E5%81%9A%E8%BF%87%E7%9A%84%E8%B0%83%E8%AF%95%E6%89%8B%E6%AE%B5%E6%9C%89%E5%93%AA%E4%BA%9B%EF%BC%9F%E6%80%8E%E4%B9%88%E6%9F%A5-kernel-log%E3%80%81%E8%B7%9F%E8%B8%AA%E9%97%AE%E9%A2%98%EF%BC%9F"><span class="toc-number">2.11.</span> <span class="toc-text">设备驱动中你做过的调试手段有哪些？怎么查 kernel log、跟踪问题？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%80%8E%E4%B9%88%E5%86%99%E4%B8%80%E4%B8%AA%E8%83%BD%E6%8C%82%E5%88%B0-sysfs-%E7%9A%84%E9%A9%B1%E5%8A%A8%E8%B0%83%E8%AF%95%E6%8E%A5%E5%8F%A3%EF%BC%9F"><span class="toc-number">2.12.</span> <span class="toc-text">怎么写一个能挂到 sysfs 的驱动调试接口？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pinctrl%E9%A9%B1%E5%8A%A8"><span class="toc-number">2.13.</span> <span class="toc-text">pinctrl驱动</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%A6%82%E5%BF%B5"><span class="toc-number">2.13.1.</span> <span class="toc-text">概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E5%87%BD%E6%95%B0"><span class="toc-number">2.13.2.</span> <span class="toc-text">实现函数</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#pinctrl-ops"><span class="toc-number">2.13.2.1.</span> <span class="toc-text">pinctrl-ops</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#pinmux-ops"><span class="toc-number">2.13.2.2.</span> <span class="toc-text">pinmux-ops</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#pinconf-ops"><span class="toc-number">2.13.2.3.</span> <span class="toc-text">pinconf-ops</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#USB%E6%89%AB%E7%9B%B2"><span class="toc-number">2.14.</span> <span class="toc-text">USB扫盲</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#USB%E4%B8%AD%E9%80%9F%E7%8E%87"><span class="toc-number">2.14.1.</span> <span class="toc-text">USB中速率</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#USB%E6%80%8E%E4%B9%88%E6%A3%80%E6%B5%8B%E8%BF%9E%E6%8E%A5%E5%92%8C%E6%96%AD%E5%BC%80"><span class="toc-number">2.14.2.</span> <span class="toc-text">USB怎么检测连接和断开</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%A7%A9-%E4%B8%89%E3%80%81BSP-%E9%80%82%E9%85%8D%E5%92%8C%E7%B3%BB%E7%BB%9F%E8%A3%81%E5%89%AA"><span class="toc-number">3.</span> <span class="toc-text">🧩 三、BSP 适配和系统裁剪</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E6%80%8E%E4%B9%88%E7%BB%99%E4%B8%80%E4%B8%AA%E6%96%B0%E6%9D%BF%E5%AD%90%E9%80%82%E9%85%8D-Linux%EF%BC%9F"><span class="toc-number">3.0.1.</span> <span class="toc-text">你怎么给一个新板子适配 Linux？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E7%A7%BB%E6%A4%8D%E8%BF%87%E5%93%AA%E5%87%A0%E4%B8%AA%E5%B9%B3%E5%8F%B0%E7%9A%84-BSP%EF%BC%9F%E9%83%BD%E5%81%9A%E4%BA%86%E5%93%AA%E4%BA%9B%E6%A8%A1%E5%9D%97%E7%9A%84%E9%80%82%E9%85%8D%EF%BC%9F"><span class="toc-number">3.0.2.</span> <span class="toc-text">你移植过哪几个平台的 BSP？都做了哪些模块的适配？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF-device-tree-overlay%EF%BC%9F%E4%BD%A0%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E4%BC%9A%E7%94%A8%E5%AE%83%EF%BC%9F"><span class="toc-number">3.0.3.</span> <span class="toc-text">什么是 device tree overlay？你什么时候会用它？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Linux-%E5%90%AF%E5%8A%A8%E5%8D%A1%E5%9C%A8-early-boot%EF%BC%8C%E4%BD%A0%E6%80%8E%E4%B9%88%E6%8E%92%E6%9F%A5%EF%BC%9F"><span class="toc-number">3.0.4.</span> <span class="toc-text">Linux 启动卡在 early boot，你怎么排查？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%80%8E%E4%B9%88%E5%9C%A8%E7%B3%BB%E7%BB%9F%E8%A3%81%E5%89%AA%E4%B8%AD%E5%AE%9A%E4%BD%8D%E6%97%A0%E7%94%A8%E6%A8%A1%E5%9D%97%EF%BC%9F%E6%80%8E%E4%B9%88%E6%8E%A7%E5%88%B6%E7%BC%96%E8%AF%91-size%EF%BC%9F"><span class="toc-number">3.0.5.</span> <span class="toc-text">怎么在系统裁剪中定位无用模块？怎么控制编译 size？</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%A7%AA-%E5%9B%9B%E3%80%81%E8%B0%83%E8%AF%95%E5%92%8C%E5%AE%9E%E6%88%98%E7%BB%8F%E9%AA%8C"><span class="toc-number">4.</span> <span class="toc-text">🧪 四、调试和实战经验</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E8%B0%83%E8%BF%87%E5%93%AA%E4%BA%9B-tricky-%E7%9A%84-bug%EF%BC%9F%E6%80%8E%E4%B9%88%E8%A7%A3%E5%86%B3%E7%9A%84%EF%BC%9F"><span class="toc-number">4.0.1.</span> <span class="toc-text">你调过哪些 tricky 的 bug？怎么解决的？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E6%80%8E%E4%B9%88%E7%94%A8%E4%B8%B2%E5%8F%A3-%E7%BD%91%E5%8F%A3%E8%B0%83%E8%AF%95%E6%9D%BF%E5%AD%90%EF%BC%9F"><span class="toc-number">4.0.2.</span> <span class="toc-text">你怎么用串口&#x2F;网口调试板子？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E6%9C%89%E6%B2%A1%E6%9C%89%E6%8E%A5%E8%A7%A6%E8%BF%87-kgdb%E3%80%81crash%E3%80%81ftrace-%E6%88%96-perf-%E8%BF%99%E4%BA%9B%E5%B7%A5%E5%85%B7%EF%BC%9F"><span class="toc-number">4.0.3.</span> <span class="toc-text">你有没有接触过 kgdb、crash、ftrace 或 perf 这些工具？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%80%E6%AC%A1%E8%B0%83%E4%B8%8D%E5%87%BA%E7%BD%91%E5%8F%A3-USB-WiFi-%E7%9A%84%E9%97%AE%E9%A2%98%EF%BC%8C%E4%BD%A0%E4%BC%9A%E6%80%8E%E4%B9%88%E4%B8%80%E6%AD%A5%E6%AD%A5%E6%8E%92%E6%9F%A5%EF%BC%9F"><span class="toc-number">4.0.4.</span> <span class="toc-text">一次调不出网口&#x2F;USB&#x2F;WiFi 的问题，你会怎么一步步排查？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%A0%E9%80%82%E9%85%8D%E8%BF%87%E5%93%AA%E4%BA%9B%E5%A4%96%E8%AE%BE%EF%BC%9F%E7%BD%91%E5%8D%A1%E3%80%81%E4%B8%B2%E5%8F%A3%E3%80%81I2C-%E8%AE%BE%E5%A4%87%E3%80%81%E5%B1%8F%E5%B9%95%E3%80%81%E6%8C%89%E9%94%AE%E3%80%81LED%EF%BC%9F%E5%88%86%E5%88%AB%E9%81%87%E5%88%B0%E8%BF%87%E4%BB%80%E4%B9%88%E9%97%AE%E9%A2%98%EF%BC%9F"><span class="toc-number">4.0.5.</span> <span class="toc-text">你适配过哪些外设？网卡、串口、I2C 设备、屏幕、按键、LED？分别遇到过什么问题？</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%F0%9F%9A%80-%E4%BA%94%E3%80%81%E8%BF%9B%E9%98%B6%E4%B8%8E%E5%8A%A0%E5%88%86%E9%A1%B9"><span class="toc-number">5.</span> <span class="toc-text">🚀 五、进阶与加分项</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-1-%E8%A7%A3%E6%9E%90%E8%AE%BE%E5%A4%87%E6%A0%91/" title="Linux设备树[1]-解析设备树">Linux设备树[1]-解析设备树</a><time datetime="2025-04-26T11:23:36.000Z" title="发表于 2025-04-26 19:23:36">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Uboot%E5%A6%82%E4%BD%95%E4%BC%A0%E9%80%92bootargs%E7%BB%99Linux/" title="Uboot如何传递bootargs给Linux">Uboot如何传递bootargs给Linux</a><time datetime="2025-04-26T10:33:15.000Z" title="发表于 2025-04-26 18:33:15">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/26/Linux%E8%AE%BE%E5%A4%87%E6%A0%91-0-%E7%90%86%E8%A7%A3dtb%E6%A0%BC%E5%BC%8F/" title="Linux设备树[0]-理解dtb格式">Linux设备树[0]-理解dtb格式</a><time datetime="2025-04-26T07:34:45.000Z" title="发表于 2025-04-26 15:34:45">2025-04-26</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/24/%E5%B5%8C%E5%85%A5%E5%BC%8FLinux%E9%9D%A2%E7%BB%8F-%E9%9A%8F%E6%84%8F%E9%9A%8F%E7%BC%98%E4%B8%8D%E5%AE%8C%E6%95%B4%E7%89%88/" title="嵌入式Linux面经-随意随缘不完整版">嵌入式Linux面经-随意随缘不完整版</a><time datetime="2025-04-24T02:56:32.000Z" title="发表于 2025-04-24 10:56:32">2025-04-24</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2025/04/20/platform-device-driver-1/" title="platform device driver[1]">platform device driver[1]</a><time datetime="2025-04-20T13:05:15.000Z" title="发表于 2025-04-20 21:05:15">2025-04-20</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2024 - 2025 By Troy Mitchell</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 7.2.0</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.3.5</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = null
+
+  const getCount = () => {
+    const countELement = document.getElementById('twikoo-count')
+    if(!countELement) return
+    twikoo.getCommentsCount({
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      urls: [window.location.pathname],
+      includeReply: false
+    }).then(res => {
+      countELement.textContent = res[0].count
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const init = (el = document, path = location.pathname) => {
+    twikoo.init({
+      el: el.querySelector('#twikoo-wrap'),
+      envId: 'https://twikoo-one-dusky.vercel.app/',
+      region: '',
+      onCommentLoaded: () => {
+        btf.loadLightbox(document.querySelectorAll('#twikoo .tk-content img:not(.tk-owo-emotion)'))
+      },
+      ...option,
+      path: isShuoshuo ? path : (option && option.path) || path
+    })
+
+    GLOBAL_CONFIG_SITE.pageType === 'post' && getCount()
+
+    isShuoshuo && (window.shuoshuoComment.destroyTwikoo = () => {
+      if (el.children.length) {
+        el.innerHTML = ''
+        el.classList.add('no-comment')
+      }
+    })
+  }
+
+  const loadTwikoo = (el, path) => {
+    if (typeof twikoo === 'object') setTimeout(() => init(el, path), 0)
+    else btf.getScript('https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js').then(() => init(el, path))
+  }
+
+  if (isShuoshuo) {
+    'Twikoo' === 'Twikoo'
+      ? window.shuoshuoComment = { loadComment: loadTwikoo }
+      : window.loadOtherComment = loadTwikoo
+    return
+  }
+
+  if ('Twikoo' === 'Twikoo' || !true) {
+    if (true) btf.loadComment(document.getElementById('twikoo-wrap'), loadTwikoo)
+    else loadTwikoo()
+  } else {
+    window.loadOtherComment = loadTwikoo
+  }
+})()</script></div><script src="https://fastly.jsdelivr.net/gh/sviptzk/HexoStaticFile@latest/Hexo/js/mouse_snow.min.js"></script><script defer="defer" id="fluttering_ribbon" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-fluttering-ribbon.min.js"></script><script id="canvas_nest" defer="defer" color="0,0,255" opacity="0.7" zIndex="-1" count="99" mobile="true" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/canvas-nest.min.js"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc/dist/click-heart.min.js" async="async" mobile="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><span id="loading-status"></span><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="search-wrap"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div><hr/><div id="local-search-results"></div><div id="local-search-stats-wrap"></div></div></div><div id="search-mask"></div><script src="/js/search/local-search.js"></script></div></div></body></html>
